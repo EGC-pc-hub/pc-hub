@@ -1,4 +1,9 @@
-from flask import redirect, render_template, request, url_for
+import os
+import secrets
+import requests
+from urllib.parse import urlencode
+
+from flask import redirect, render_template, request, url_for, session, jsonify
 from flask_login import current_user, login_user, logout_user
 
 from app.modules.auth import auth_bp
@@ -52,3 +57,100 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("public.index"))
+
+
+@auth_bp.route("/github/status", methods=["GET"])
+def github_status():
+    connected = bool(session.get("github_token"))
+    return jsonify({"connected": connected}), 200
+
+
+@auth_bp.route("/github/login", methods=["GET"])
+def github_login():
+    client_id = os.getenv("GITHUB_CLIENT_ID")
+    client_secret = os.getenv("GITHUB_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        return "GitHub OAuth not configured. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET.", 500
+
+    state = secrets.token_urlsafe(16)
+    session["github_oauth_state"] = state
+    next_param = request.args.get("next")
+    if next_param:
+        session["github_oauth_next"] = next_param
+
+    redirect_uri = url_for("auth.github_callback", _external=True)
+    params = {
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        # Solo pedimos acceso a repos para poder crear repos privados en la cuenta del usuario
+        "scope": "repo",
+        "state": state,
+    }
+    url = f"https://github.com/login/oauth/authorize?{urlencode(params)}"
+    # Usamos una pequeña página HTML para realizar la redirección en el cliente (en lugar de
+    # devolver un redirect/302 desde el servidor).
+    # Motivos:
+    # - Evitar problemas con proxies inversos o balanceadores que a veces alteran o ignoran la
+    #   cabecera Location de respuestas 302.
+    # - Asegurar la redirección incluso si el proxy reescribe dominios/rutas o hay mezcla de
+    #   HTTP/HTTPS.
+    # - Mantener un comportamiento consistente en navegadores y evitar sorpresas con CORS al
+    #   seguir la redirección.
+    # Detalles de implementación:
+    # - Incluimos un meta refresh y window.location.replace hacia la URL de autorización de GitHub.
+    # - Si JavaScript está deshabilitado, el enlace en el cuerpo permite continuar manualmente.
+    # - No se exponen secretos: el parámetro state y el next se guardan en sesión; aquí solo
+    #   generamos la URL pública de GitHub.
+    # - Esta ruta devuelve HTML intencionadamente en lugar de usar redirect() para mayor
+    #   compatibilidad con entornos con proxy.
+    html = f"""
+    <!DOCTYPE html>
+    <html lang=\"en\">
+    <head>
+        <meta charset=\"utf-8\">
+        <meta http-equiv=\"refresh\" content=\"0;url={url}\">
+        <title>Redirecting to GitHub…</title>
+    </head>
+    <body>
+        <p>Redirecting to GitHub… If you are not redirected automatically, <a href=\"{url}\">click here</a>.</p>
+        <script>window.location.replace({url!r});</script>
+    </body>
+    </html>
+    """
+    return html
+
+
+@auth_bp.route("/github/callback", methods=["GET"])
+def github_callback():
+    code = request.args.get("code")
+    state = request.args.get("state")
+    expected_state = session.get("github_oauth_state")
+    if not code or not state or state != expected_state:
+        return "Invalid OAuth state.", 400
+
+    client_id = os.getenv("GITHUB_CLIENT_ID")
+    client_secret = os.getenv("GITHUB_CLIENT_SECRET")
+    token_url = "https://github.com/login/oauth/access_token"
+
+    headers = {"Accept": "application/json"}
+    data = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "code": code,
+        "redirect_uri": url_for("auth.github_callback", _external=True),
+        "state": state,
+    }
+    try:
+        resp = requests.post(token_url, headers=headers, data=data, timeout=30)
+        resp.raise_for_status()
+        payload = resp.json()
+        access_token = payload.get("access_token")
+        if not access_token:
+            return f"GitHub OAuth error: {payload}", 400
+        session["github_token"] = access_token
+        # Limpieza de estado OAuth en sesión para evitar fugas
+        session.pop("github_oauth_state", None)
+        next_url = session.pop("github_oauth_next", url_for("public.index"))
+        return redirect(next_url)
+    except Exception as exc:
+        return f"OAuth exchange failed: {exc}", 400
