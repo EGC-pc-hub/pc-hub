@@ -92,6 +92,88 @@ class DataSetService(BaseService):
     def total_dataset_views(self) -> int:
         return self.dsviewrecord_repostory.total_dataset_views()
 
+    def trending_datasets_last_week(self, limit: int = 3):
+        """Return top `limit` datasets downloaded in the previous calendar week.
+
+        Previous calendar week = the week before the current week, from Monday 00:00 UTC to the next Monday 00:00 UTC (exclusive).
+
+        Each item is a dict with keys: id, title, main_author, downloads, url
+        """
+        from datetime import datetime, timezone, timedelta
+
+        now = datetime.now(timezone.utc)
+        # start of current week (Monday 00:00 UTC)
+        start_of_week = datetime(year=now.year, month=now.month, day=now.day, tzinfo=timezone.utc) - timedelta(days=now.weekday())
+        last_week_start = start_of_week - timedelta(days=7)
+        last_week_end = start_of_week
+
+        top = self.dsdownloadrecord_repository.top_downloaded_in_period(last_week_start, limit, until=last_week_end)
+        results = []
+        for item in top:
+            # item is (dataset_id, count)
+            dataset_id, count = item
+            dataset = self.repository.get_by_id(dataset_id)
+            if not dataset:
+                continue
+            # pick the first author if available
+            main_author = None
+            try:
+                if dataset.ds_meta_data.authors and len(dataset.ds_meta_data.authors) > 0:
+                    main_author = dataset.ds_meta_data.authors[0].name
+            except Exception:
+                main_author = None
+
+            results.append(
+                {
+                    "id": dataset.id,
+                    "title": dataset.ds_meta_data.title,
+                    "main_author": main_author,
+                    "downloads": int(count),
+                    "url": dataset.get_uvlhub_doi(),
+                }
+            )
+
+        return results
+
+    def trending_datasets_this_week(self, limit: int = 3):
+        """Return top `limit` datasets downloaded since the start of the current week (Monday 00:00 UTC).
+
+        Each item is a dict with keys: id, title, main_author, downloads, url
+        """
+        from datetime import datetime, timezone, timedelta
+
+        now = datetime.now(timezone.utc)
+        # Monday is weekday 0. Compute start of week (Monday 00:00:00)
+        start_of_week = datetime(year=now.year, month=now.month, day=now.day, tzinfo=timezone.utc)
+        # subtract number of days since monday
+        start_of_week = start_of_week - timedelta(days=now.weekday())
+
+        top = self.dsdownloadrecord_repository.top_downloaded_in_period(start_of_week, limit)
+        results = []
+        for item in top:
+            dataset_id, count = item
+            dataset = self.repository.get_by_id(dataset_id)
+            if not dataset:
+                continue
+            main_author = None
+            try:
+                if dataset.ds_meta_data.authors and len(dataset.ds_meta_data.authors) > 0:
+                    main_author = dataset.ds_meta_data.authors[0].name
+            except Exception:
+                main_author = None
+
+            results.append(
+                {
+                    "id": dataset.id,
+                    "title": dataset.ds_meta_data.title,
+                    "main_author": main_author,
+                    "downloads": int(count),
+                    "url": dataset.get_uvlhub_doi(),
+                }
+            )
+
+        return results
+
     def create_from_form(self, form, current_user) -> DataSet:
         main_author = {
             "name": f"{current_user.profile.surname}, {current_user.profile.name}",

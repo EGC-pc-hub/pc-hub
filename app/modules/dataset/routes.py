@@ -214,23 +214,26 @@ def download_dataset(dataset_id):
             mimetype="application/zip",
         )
 
-    # Check if the download record already exists for this cookie
-    existing_record = DSDownloadRecord.query.filter_by(
+    # Always record the download (count each download separately)
+    DSDownloadRecordService().create(
         user_id=current_user.id if current_user.is_authenticated else None,
         dataset_id=dataset_id,
+        download_date=datetime.now(timezone.utc),
         download_cookie=user_cookie,
-    ).first()
-
-    if not existing_record:
-        # Record the download in your database
-        DSDownloadRecordService().create(
-            user_id=current_user.id if current_user.is_authenticated else None,
-            dataset_id=dataset_id,
-            download_date=datetime.now(timezone.utc),
-            download_cookie=user_cookie,
-        )
+    )
 
     return resp
+
+
+
+@dataset_bp.route("/dataset/api/trending", methods=["GET"])
+def api_trending():
+    """Return trending datasets JSON (used by frontend to refresh the widget).
+
+    Uses the same service as the template (last week).
+    """
+    trending = DataSetService().trending_datasets_last_week(limit=3)
+    return jsonify(trending)
 
 
 @dataset_bp.route("/doi/<path:doi>/", methods=["GET"])

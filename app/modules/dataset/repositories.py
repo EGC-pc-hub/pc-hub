@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from flask_login import current_user
@@ -23,6 +23,21 @@ class DSDownloadRecordRepository(BaseRepository):
     def total_dataset_downloads(self) -> int:
         max_id = self.model.query.with_entities(func.max(self.model.id)).scalar()
         return max_id if max_id is not None else 0
+
+    def top_downloaded_in_period(self, since: datetime, limit: int = 3, until: datetime = None):
+        """Return a list of tuples (dataset_id, downloads_count) for downloads since `since` (and before `until` if provided), ordered desc."""
+        query = self.model.query.with_entities(self.model.dataset_id, func.count(self.model.id).label("cnt"))
+        if until:
+            query = query.filter(self.model.download_date >= since, self.model.download_date < until)
+        else:
+            query = query.filter(self.model.download_date >= since)
+
+        return (
+            query.group_by(self.model.dataset_id)
+            .order_by(desc("cnt"))
+            .limit(limit)
+            .all()
+        )
 
 
 class DSMetaDataRepository(BaseRepository):
