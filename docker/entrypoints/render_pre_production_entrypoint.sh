@@ -12,18 +12,26 @@
 # https://creativecommons.org/licenses/by/4.0/
 # ---------------------------------------------------------------------------
 
-# Exit immediately if a command exits with a non-zero status
-set -e
+# Exit immediately on error, reference to unset var, and propagate errors in pipelines
+set -euo pipefail
 
 # Resolve repository root no matter where this script is executed from
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # script path: <repo>/docker/entrypoints/*.sh -> repo root is two levels up
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$REPO_ROOT"
+echo "[render] Using repository root: $REPO_ROOT"
+if [ ! -f "$REPO_ROOT/pyproject.toml" ]; then
+    echo "[render][ERROR] pyproject.toml not found at $REPO_ROOT"
+    echo "[render] Current directory: $(pwd)"
+    echo "[render] Listing contents:" && ls -la
+    exit 1
+fi
 
 # Install Rosemary (package at repo root where pyproject.toml lives)
 python3 -m pip install --upgrade pip
-python3 -m pip install .
+# Install the project by absolute path to avoid CWD issues in Render
+python3 -m pip install "$REPO_ROOT"
 
 # Initialize migrations only if the migrations directory doesn't exist
 if [ ! -d "migrations/versions" ]; then
