@@ -15,6 +15,9 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+# Install Rosemary
+pip install -e ./
+
 # Initialize migrations only if the migrations directory doesn't exist
 if [ ! -d "migrations/versions" ]; then
     # Initialize the migration repository
