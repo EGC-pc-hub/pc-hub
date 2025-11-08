@@ -15,18 +15,38 @@
 # Exit immediately on error, reference to unset var, and propagate errors in pipelines
 set -euo pipefail
 
-# Resolve repository root no matter where this script is executed from
+# Resolve repository root robustly no matter where this script is executed from
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# script path: <repo>/docker/entrypoints/*.sh -> repo root is two levels up
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-cd "$REPO_ROOT"
-echo "[render] Using repository root: $REPO_ROOT"
-if [ ! -f "$REPO_ROOT/pyproject.toml" ]; then
-    echo "[render][ERROR] pyproject.toml not found at $REPO_ROOT"
-    echo "[render] Current directory: $(pwd)"
-    echo "[render] Listing contents:" && ls -la
+
+# Candidate roots where the source code may live in Render/Docker
+CANDIDATES=(
+    "$SCRIPT_DIR/../.."           # repo root relative to this script
+    "/app"                         # common WORKDIR in Docker images
+    "/opt/render/project/src"      # Render native path
+    "$(pwd)"                       # current working directory
+)
+
+REPO_ROOT=""
+for d in "${CANDIDATES[@]}"; do
+    if [ -f "$d/pyproject.toml" ]; then
+        REPO_ROOT="$(cd "$d" && pwd)"
+        break
+    fi
+done
+
+if [ -z "$REPO_ROOT" ]; then
+    echo "[render][ERROR] Could not locate repository root (pyproject.toml not found)."
+    echo "[render] SCRIPT_DIR=$SCRIPT_DIR"
+    echo "[render] CWD=$(pwd)"
+    echo "[render] Contents of / and /app and /opt/render/project/src if present:"
+    echo "--- ls -la / ---" && ls -la /
+    if [ -d /app ]; then echo "--- ls -la /app ---" && ls -la /app; fi
+    if [ -d /opt/render/project/src ]; then echo "--- ls -la /opt/render/project/src ---" && ls -la /opt/render/project/src; fi
     exit 1
 fi
+
+cd "$REPO_ROOT"
+echo "[render] Using repository root: $REPO_ROOT"
 
 # Install Rosemary (package at repo root where pyproject.toml lives)
 python3 -m pip install --upgrade pip
