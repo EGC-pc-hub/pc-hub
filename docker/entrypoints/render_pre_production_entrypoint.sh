@@ -15,8 +15,15 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-# Install Rosemary
-pip install -e ./
+# Resolve repository root no matter where this script is executed from
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# script path: <repo>/docker/entrypoints/*.sh -> repo root is two levels up
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$REPO_ROOT"
+
+# Install Rosemary (package at repo root where pyproject.toml lives)
+python3 -m pip install --upgrade pip
+python3 -m pip install .
 
 # Initialize migrations only if the migrations directory doesn't exist
 if [ ! -d "migrations/versions" ]; then
