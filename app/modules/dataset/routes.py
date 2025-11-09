@@ -309,7 +309,8 @@ def backup_dataset_to_github(dataset_id):
         # Creamos el repo con el nombre formateado
         repo_name = repo_name_formatting(title)
         repo_service = GitHubRepoService(token=token)
-        repo_info = repo_service.create_repo(name=repo_name, private=True, description=f"Backup for dataset {dataset.id}")
+        repo_info = repo_service.create_repo(name=repo_name, private=True,
+                        description=f"Backup for dataset {dataset.id}")
 
         full_name = repo_info.get("full_name")
         html_url = repo_info.get("html_url")
@@ -353,7 +354,8 @@ def backup_dataset_github_ui(dataset_id):
 
         repo_name = repo_name_formatting(title)
         repo_service = GitHubRepoService(token=token)
-        repo_info = repo_service.create_repo(name=repo_name, private=True, description=f"Backup for dataset {dataset.id}")
+        repo_info = repo_service.create_repo(name=repo_name, private=True,
+                        description=f"Backup for dataset {dataset.id}")
         full_name = repo_info.get("full_name")
         html_url = repo_info.get("html_url")
         default_branch = repo_info.get("default_branch", "main")
@@ -361,7 +363,6 @@ def backup_dataset_github_ui(dataset_id):
         content_service = GitHubContentService(token=token, repo_full_name=full_name, branch=default_branch)
         result = content_service.upload_dataset(dataset)
 
-        
         return_url = request.args.get("return") or request.args.get("return_url")
         if return_url:
             # Si se abrió en popup, notificar al opener y cerrar
@@ -382,7 +383,8 @@ def backup_dataset_github_ui(dataset_id):
                 (function() {{
                     var data = {json.dumps(payload)};
                     try {{
-                        if (window.opener && window.opener.location && window.opener.location.origin === window.location.origin) {{
+                        if (window.opener && window.opener.location
+                            && window.opener.location.origin === window.location.origin) {{
                             window.opener.postMessage(data, window.location.origin);
                         }}
                     }} catch (e) {{}}
