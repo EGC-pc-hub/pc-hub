@@ -1,6 +1,5 @@
 import json
 import os
-import tempfile
 import types
 from unittest.mock import patch
 

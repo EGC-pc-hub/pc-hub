@@ -3,8 +3,6 @@ from unittest.mock import patch
 
 import pytest
 
-from app.modules.auth.models import User
-
 
 @pytest.mark.usefixtures("test_client")
 class TestAuthGithubRoutes:
