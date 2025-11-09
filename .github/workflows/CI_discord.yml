@@ -6,8 +6,19 @@ on:
       - main
 
 jobs:
-  test_and_notify:
+  build:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: pchub_root_password
+          MYSQL_DATABASE: pchubdb_test
+          MYSQL_USER: pchub_user
+          MYSQL_PASSWORD: pchub_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
     - name: Checkout code
@@ -28,8 +39,7 @@ jobs:
       id: rosemary_tests
       run: |
         rosemary test
-      continue-on-error: true
-
+        
     - name: Determine test result
       id: result
       run: |
