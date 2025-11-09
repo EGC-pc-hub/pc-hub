@@ -310,8 +310,7 @@ def backup_dataset_to_github(dataset_id):
         repo_name = repo_name_formatting(title)
         repo_service = GitHubRepoService(token=token)
         repo_info = repo_service.create_repo(
-            name=repo_name, private=True,
-            description=f"Backup for dataset {dataset.id}"
+            name=repo_name, private=True, description=f"Backup for dataset {dataset.id}"
         )
 
         full_name = repo_info.get("full_name")
@@ -321,12 +320,17 @@ def backup_dataset_to_github(dataset_id):
         content_service = GitHubContentService(token=token, repo_full_name=full_name, branch=default_branch)
         result = content_service.upload_dataset(dataset, prefix="")
 
-        return jsonify({
-            "message": "Backup completed",
-            "repo": full_name,
-            "url": html_url,
-            "uploaded": result.get("uploaded", 0),
-        }), 200
+        return (
+            jsonify(
+                {
+                    "message": "Backup completed",
+                    "repo": full_name,
+                    "url": html_url,
+                    "uploaded": result.get("uploaded", 0),
+                }
+            ),
+            200,
+        )
     except Exception as exc:
         logger.exception(f"GitHub backup failed: {exc}")
         return jsonify({"error": str(exc)}), 400
@@ -357,8 +361,7 @@ def backup_dataset_github_ui(dataset_id):
         repo_name = repo_name_formatting(title)
         repo_service = GitHubRepoService(token=token)
         repo_info = repo_service.create_repo(
-            name=repo_name, private=True,
-            description=f"Backup for dataset {dataset.id}"
+            name=repo_name, private=True, description=f"Backup for dataset {dataset.id}"
         )
         full_name = repo_info.get("full_name")
         html_url = repo_info.get("html_url")
@@ -375,7 +378,7 @@ def backup_dataset_github_ui(dataset_id):
                     "type": "github-backup-done",
                     "repo": full_name or "",
                     "url": html_url or "",
-                    "uploaded": (result or {}).get("uploaded", 0)
+                    "uploaded": (result or {}).get("uploaded", 0),
                 }
                 html = f"""
                 <!DOCTYPE html>
@@ -402,12 +405,14 @@ def backup_dataset_github_ui(dataset_id):
             # Si no, añade los parámetros UX a la URL de retorno y redirige
             split = urlsplit(return_url)
             q = dict(parse_qsl(split.query))
-            q.update({
-                "backup": "done",
-                "repo": full_name or "",
-                "url": html_url or "",
-                "uploaded": str((result or {}).get("uploaded", 0))
-            })
+            q.update(
+                {
+                    "backup": "done",
+                    "repo": full_name or "",
+                    "url": html_url or "",
+                    "uploaded": str((result or {}).get("uploaded", 0)),
+                }
+            )
             new_return = urlunsplit((split.scheme, split.netloc, split.path, urlencode(q), split.fragment))
             return redirect(new_return)
         # Si no hay URL de retorno, mostrar un mensaje simple

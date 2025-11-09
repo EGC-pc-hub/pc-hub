@@ -295,8 +295,14 @@ class GitHubRepoService:
 
 class GitHubAPIError(Exception):
 
-    def __init__(self, status: int, message: str, reason: Optional[str] = None,
-                 docs_url: Optional[str] = None, raw: Optional[dict] = None):
+    def __init__(
+        self,
+        status: int,
+        message: str,
+        reason: Optional[str] = None,
+        docs_url: Optional[str] = None,
+        raw: Optional[dict] = None,
+    ):
         super().__init__(message)
         self.status = status
         self.message = message
