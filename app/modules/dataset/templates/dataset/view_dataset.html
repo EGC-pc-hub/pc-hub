@@ -230,7 +230,7 @@
     </div>
 
     <div class="col-xl-4 col-lg-12 col-md-12 col-sm-12">
-
+    
         <div class="list-group">
 
             <div class="list-group-item">
@@ -323,13 +323,40 @@
                 {% endfor %}
             {% endfor %}
         </div>
-        
-        
-    
-        <a href="/dataset/download/{{ dataset.id }}" class="btn btn-primary mt-3" style="border-radius: 5px;">
+
+
+        <a href="/dataset/download/{{ dataset.id }}" class="btn btn-primary mt-3 mb-3" style="border-radius: 5px;">
             <i data-feather="download" class="center-button-icon"></i>
             Download all ({{ dataset.get_file_total_size_for_human() }})
-        </a>
+        </a>    
+
+        {% if current_user.is_authenticated %}
+        <div class="list-group">
+
+            <div class="list-group-item">
+
+                <div class="row">
+                    <div class="col-12 d-flex justify-content-between align-items-center">
+                        <h4 style="margin-bottom: 0px">Backup the Dataset</h4>
+                    </div>
+                </div>
+                
+
+            </div>
+
+            <div class="list-group-item">
+                <div class="d-grid gap-2">
+                    <button id="btnBackupGithub" class="btn btn-dark" style="border-radius: 5px;" onclick="backupToGithub('{{ dataset.id }}')">
+                        <i data-feather="github" class="center-button-icon"></i>
+                        Backup to Github
+                    </button>
+                </div>
+                <div id="backup_status" class="mt-2"></div>
+            </div>
+        </div>
+        {% endif %}
+
+        
     </div>
     
 </div>
@@ -367,6 +394,51 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         feather.replace();
+
+        // Para mostrar el mensaje de backup completado si venimos de la página
+        // de GitHub para autorizar la app
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('backup') === 'done') {
+            const url = params.get('url') || '#';
+            const uploaded = params.get('uploaded') || '0';
+            const updated = params.get('updated') || '0';
+            const statusDiv = document.getElementById('backup_status');
+            const btn = document.getElementById('btnBackupGithub');
+            if (statusDiv) {
+                statusDiv.innerHTML = `<div class="alert alert-success py-1 my-2">Backup completed. Repo: <a href="${url}" target="_blank">${url}</a>. Uploaded: ${uploaded}</div>`;
+            }
+            if (btn) {
+                btn.innerHTML = '<i data-feather="github" class="center-button-icon"></i> Backed up';
+            }
+            feather.replace();
+            // Clean the params from the URL
+            const cleanUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
+
+        // Escuchar mensajes del popup OAuth y actualizar UI
+        window.addEventListener('message', (event) => {
+            try {
+                if (event.origin !== window.location.origin) return;
+                const data = event.data || {};
+                if (data.type === 'github-backup-done') {
+                    const statusDiv = document.getElementById('backup_status');
+                    const btn = document.getElementById('btnBackupGithub');
+                    const repoUrl = data.url || '#';
+                    const uploaded = data.uploaded || 0;
+                    if (statusDiv) {
+                        statusDiv.innerHTML = `<div class=\"alert alert-success py-1 my-2\">Backup completed. Repo: <a href=\"${repoUrl}\" target=\"_blank\">${repoUrl}</a>. Uploaded: ${uploaded}</div>`;
+                    }
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i data-feather=\"github\" class=\"center-button-icon\"></i> Backed up';
+                    }
+                    feather.replace();
+                }
+            } catch (e) {
+                console.error('Error handling popup message', e);
+            }
+        });
     });
 
     var currentFileId;
@@ -393,44 +465,54 @@
     }
 
     function checkUVL(file_id) {
-    const outputDiv = document.getElementById('check_' + file_id);
-    outputDiv.innerHTML = ''; // Clear previous output
+        const outputDivs = document.querySelectorAll('[id="check_' + file_id + '"]');
+        outputDivs.forEach(div => div.innerHTML = ''); // Clear previous output in all mirrors
 
-    fetch(`/flamapy/check_uvl/${file_id}`)
-        .then(response => {
-            return response.json().then(data => ({
-                status: response.status,
-                data
-            }));
-        })
-        .then(({ status, data }) => {
-            if (status === 400) {
-                // Display errors
-                if (data.errors) {
-                    outputDiv.innerHTML = '<span class="badge badge-danger">Errors:</span>';
-                    data.errors.forEach(error => {
-                        const errorElement = document.createElement('span');
-                        errorElement.className = 'badge badge-danger';
-                        errorElement.textContent = error;
-                        outputDiv.appendChild(errorElement);
-                        outputDiv.appendChild(document.createElement('br')); // Line break for better readability
+        fetch(`/flamapy/check_uvl/${file_id}`)
+            .then(response => {
+                return response.json().then(data => ({
+                    status: response.status,
+                    data
+                }));
+            })
+            .then(({ status, data }) => {
+                if (status === 400) {
+                    // Display errors
+                    if (data.errors) {
+                        outputDivs.forEach(div => {
+                            div.innerHTML = '<span class="badge badge-danger">Errors:</span>';
+                            data.errors.forEach(error => {
+                                const errorElement = document.createElement('span');
+                                errorElement.className = 'badge badge-danger';
+                                errorElement.textContent = error;
+                                div.appendChild(errorElement);
+                                div.appendChild(document.createElement('br')); // Line break for better readability
+                            });
+                        });
+                    } else {
+                        outputDivs.forEach(div => {
+                            div.innerHTML = `<span class="badge badge-danger">Error: ${data.error}</span>`;
+                        });
+                    }
+                } else if (status === 200) {
+                    // Display success message
+                    outputDivs.forEach(div => {
+                        div.innerHTML = '<span class="badge badge-success">Valid Model</span>';
                     });
                 } else {
-                    outputDiv.innerHTML = `<span class="badge badge-danger">Error: ${data.error}</span>`;
+                    // Handle unexpected status
+                    outputDivs.forEach(div => {
+                        div.innerHTML = `<span class="badge badge-warning">Unexpected response status: ${status}</span>`;
+                    });
                 }
-            } else if (status === 200) {
-                // Display success message
-                outputDiv.innerHTML = '<span class="badge badge-success">Valid Model</span>';
-            } else {
-                // Handle unexpected status
-                outputDiv.innerHTML = `<span class="badge badge-warning">Unexpected response status: ${status}</span>`;
-            }
-        })
-        .catch(error => {
-            // Handle fetch errors
-            outputDiv.innerHTML = `<span class="badge badge-danger">An unexpected error occurred: ${error.message}</span>`;
-        });
-}
+            })
+            .catch(error => {
+                // Handle fetch errors
+                outputDivs.forEach(div => {
+                    div.innerHTML = `<span class="badge badge-danger">An unexpected error occurred: ${error.message}</span>`;
+                });
+            });
+    }
 
 
     /*
@@ -491,6 +573,104 @@
         }).catch(err => {
             console.error('Failed to copy text: ', err);
         });
+    }
+
+    function backupToGithub(datasetId) {
+        const btn = document.getElementById('btnBackupGithub');
+        const statusDiv = document.getElementById('backup_status');
+        statusDiv.innerHTML = '';
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Backing up…';
+        
+        // Primero: comprobar que el dataset pertenece al usuario antes de tocar GitHub
+        fetch(`/dataset/${datasetId}/backup/authorised-user`)
+            .then(response => response.json().then(data => ({ status: response.status, data })))
+            .then(({ status, data }) => {
+                // Si no está autorizado, mostrar mensaje y detener proceso
+                if (status === 403) {
+                    statusDiv.innerHTML = `<div class=\"alert alert-warning py-1 my-2\">You are not authorized to back up this dataset.</div>`;
+                    btn.innerHTML = '<i data-feather="github" class="center-button-icon"></i> Backup to Github';
+                    feather.replace();
+                    throw 'stop';
+                } else if (status !== 200) {
+                    // si hay otro error, mostrar mensaje genérico y detener proceso
+                    const errMsg = (data && (data.error || data.message)) ? (data.error || data.message) : 'Unexpected error';
+                    statusDiv.innerHTML = `<div class=\"alert alert-danger py-1 my-2\">${errMsg}</div>`;
+                    btn.innerHTML = '<i data-feather="github" class="center-button-icon"></i> Backup to Github';
+                    feather.replace();
+                    throw 'stop';
+                }
+            })
+            // Segundo: comprobar conexión OAuth con GitHub
+            .then(() => fetch(`/github/status`))
+            .then(res => res.json())
+            .then(({ connected }) => {
+                if (!connected) {
+                    // No conectado: iniciar OAuth en popup
+                    const returnUrl = window.location.pathname + window.location.search;
+                    const nextUrl = `/dataset/${datasetId}/backup/github-ui?return=${encodeURIComponent(returnUrl)}&popup=1`;
+                    const authUrl = `/github/login?next=${encodeURIComponent(nextUrl)}`;
+                    const w = 900, h = 700;
+                    const y = window.top.outerHeight / 2 + window.top.screenY - ( h / 2);
+                    const x = window.top.outerWidth / 2 + window.top.screenX - ( w / 2);
+                    const popup = window.open(authUrl, 'github_oauth', `width=${w},height=${h},left=${x},top=${y},resizable=yes,scrollbars=yes`);
+                    if (!popup) {
+                        // Popup bloqueado: fallback a redirección completa
+                        window.location.href = authUrl;
+                    }
+                    throw 'redirecting';
+                }
+                // Proceder con backup por AJAX si ya está conectado
+                return fetch(`/dataset/${datasetId}/backup/github`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            })
+            .then(response => response.json().then(data => ({ status: response.status, data })))
+            .then(({ status, data }) => {
+                // Manejar respuestas del backup para mostrar los mensajes adecuados
+                if (status === 200) {
+                    // Backup exitoso
+                    const url = data && data.url ? data.url : '#';
+                    statusDiv.innerHTML = `<div class=\"alert alert-success py-1 my-2\">Backup completed. Repo: <a href=\"${url}\" target=\"_blank\">${url}</a>. Uploaded: ${data.uploaded}</div>`;
+                    btn.innerHTML = '<i data-feather="github" class="center-button-icon"></i> Backed up';
+                } else if (status === 403) {
+                    // No autorizado: mostrar mensaje y detener proceso
+                    statusDiv.innerHTML = `<div class="alert alert-warning py-1 my-2">You are not authorized to back up this dataset.</div>`;
+                    btn.innerHTML = '<i data-feather="github" class="center-button-icon"></i> Backup to Github';
+                } else if (status === 401) {
+                    // Se muestra el popup de OAuth otra vez si la conexión ha caducado,
+                    // o el usuario no permitió el acceso, o cerró el popup antes de completar el proceso,
+                    // o hubo otro error en la autenticación
+                    const returnUrl = window.location.pathname + window.location.search;
+                    const nextUrl = `/dataset/${datasetId}/backup/github-ui?return=${encodeURIComponent(returnUrl)}&popup=1`;
+                    const authUrl = `/github/login?next=${encodeURIComponent(nextUrl)}`;
+                    const w = 900, h = 700;
+                    const y = window.top.outerHeight / 2 + window.top.screenY - ( h / 2);
+                    const x = window.top.outerWidth / 2 + window.top.screenX - ( w / 2);
+                    const popup = window.open(authUrl, 'github_oauth', `width=${w},height=${h},left=${x},top=${y},resizable=yes,scrollbars=yes`);
+                    if (!popup) {
+                        window.location.href = authUrl;
+                    }
+                } else {
+                    // Si hay otro error se muestra un mensaje genérico
+                    const errMsg = (data && (data.error || data.message)) ? (data.error || data.message) : 'Unexpected error';
+                    statusDiv.innerHTML = `<div class=\"alert alert-danger py-1 my-2\">${errMsg}</div>`;
+                    btn.innerHTML = '<i data-feather="github" class="center-button-icon"></i> Backup to Github';
+                }
+                feather.replace();
+            })
+            .catch(err => {
+                if (err !== 'redirecting' && err !== 'stop') {
+                    statusDiv.innerHTML = `<div class=\"alert alert-danger py-1 my-2\">${err.message || err}</div>`;
+                    btn.innerHTML = '<i data-feather="github" class="center-button-icon"></i> Backup to Github';
+                    feather.replace();
+                }
+            })
+            .finally(() => {
+                btn.disabled = false;
+            });
     }
 </script>
 

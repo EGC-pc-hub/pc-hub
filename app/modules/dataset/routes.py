@@ -17,7 +17,9 @@ from flask import (
     send_from_directory,
     url_for,
 )
+from flask import session
 from flask_login import current_user, login_required
+from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
 from app.modules.dataset import dataset_bp
 from app.modules.dataset.forms import DataSetForm
@@ -29,6 +31,8 @@ from app.modules.dataset.services import (
     DSDownloadRecordService,
     DSMetaDataService,
     DSViewRecordService,
+    GitHubRepoService,
+    GitHubContentService,
 )
 from app.modules.zenodo.services import ZenodoService
 
@@ -270,3 +274,138 @@ def get_unsynchronized_dataset(dataset_id):
         abort(404)
 
     return render_template("dataset/view_dataset.html", dataset=dataset)
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/backup/authorised-user", methods=["GET"])
+@login_required
+def backup_dataset_can(dataset_id):
+    # Comprueba si el usuario actual está autorizado para hacer backup del dataset,
+    # es decir, si el dataset pertenece al usuario actual
+    dataset = dataset_service.get_or_404(dataset_id)
+    if current_user.id != dataset.user_id:
+        return jsonify({"error": "Not authorized to back up this dataset."}), 403
+    return jsonify({"can_backup": True}), 200
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/backup/github", methods=["POST"])
+@login_required
+def backup_dataset_to_github(dataset_id):
+    # Crea el repo y sube los archivos en caso de que ya se esté autenticado con GitHub
+    dataset = dataset_service.get_or_404(dataset_id)
+    # Vuelve a comprobar si el usuario actual está autorizado para hacer backup del dataset por si acaso
+    if current_user.id != dataset.user_id:
+        return jsonify({"error": "Not authorized"}), 403
+
+    try:
+        token = session.get("github_token")
+        # En este punto debería estar ya autenticado con GitHub
+        # Lo comprobamos de nuevo por si acaso
+        if not token:
+            return jsonify({"error": "Not authenticated with GitHub"}), 401
+
+        title = dataset.ds_meta_data.title or f"dataset-{dataset.id}"
+        from app.modules.dataset.services import repo_name_formatting
+
+        # Creamos el repo con el nombre formateado
+        repo_name = repo_name_formatting(title)
+        repo_service = GitHubRepoService(token=token)
+        repo_info = repo_service.create_repo(name=repo_name, private=True, description=f"Backup for dataset {dataset.id}")
+
+        full_name = repo_info.get("full_name")
+        html_url = repo_info.get("html_url")
+        default_branch = repo_info.get("default_branch", "main")
+
+        content_service = GitHubContentService(token=token, repo_full_name=full_name, branch=default_branch)
+        result = content_service.upload_dataset(dataset, prefix="")
+
+        return jsonify({
+            "message": "Backup completed",
+            "repo": full_name,
+            "url": html_url,
+            "uploaded": result.get("uploaded", 0),
+        }), 200
+    except Exception as exc:
+        logger.exception(f"GitHub backup failed: {exc}")
+        return jsonify({"error": str(exc)}), 400
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/backup/github-ui", methods=["GET"])
+@login_required
+def backup_dataset_github_ui(dataset_id):
+    # Crear el repo y subir los archivos en el caso de que se abra el popup de GitHub
+    dataset = dataset_service.get_or_404(dataset_id)
+    if current_user.id != dataset.user_id:
+        return abort(403)
+
+    token = session.get("github_token")
+    if not token:
+        next_url = url_for(
+            "dataset.backup_dataset_github_ui",
+            dataset_id=dataset_id,
+            return_url=request.args.get("return", request.path),
+            popup=request.args.get("popup"),
+        )
+        return redirect(url_for("auth.github_login", next=next_url))
+
+    try:
+        title = dataset.ds_meta_data.title or f"dataset-{dataset.id}"
+        from app.modules.dataset.services import repo_name_formatting
+
+        repo_name = repo_name_formatting(title)
+        repo_service = GitHubRepoService(token=token)
+        repo_info = repo_service.create_repo(name=repo_name, private=True, description=f"Backup for dataset {dataset.id}")
+        full_name = repo_info.get("full_name")
+        html_url = repo_info.get("html_url")
+        default_branch = repo_info.get("default_branch", "main")
+
+        content_service = GitHubContentService(token=token, repo_full_name=full_name, branch=default_branch)
+        result = content_service.upload_dataset(dataset)
+
+        
+        return_url = request.args.get("return") or request.args.get("return_url")
+        if return_url:
+            # Si se abrió en popup, notificar al opener y cerrar
+            if request.args.get("popup") == "1":
+                payload = {
+                    "type": "github-backup-done",
+                    "repo": full_name or "",
+                    "url": html_url or "",
+                    "uploaded": (result or {}).get("uploaded", 0)
+                }
+                html = f"""
+                <!DOCTYPE html>
+                <html lang='en'>
+                <head><meta charset='utf-8'><title>Backup completed</title></head>
+                <body>
+                <p>Backup completed. You can close this window.</p>
+                <script>
+                (function() {{
+                    var data = {json.dumps(payload)};
+                    try {{
+                        if (window.opener && window.opener.location && window.opener.location.origin === window.location.origin) {{
+                            window.opener.postMessage(data, window.location.origin);
+                        }}
+                    }} catch (e) {{}}
+                    window.close();
+                }})();
+                </script>
+                </body>
+                </html>
+                """
+                return html
+            # Si no, añade los parámetros UX a la URL de retorno y redirige
+            split = urlsplit(return_url)
+            q = dict(parse_qsl(split.query))
+            q.update({
+                "backup": "done",
+                "repo": full_name or "",
+                "url": html_url or "",
+                "uploaded": str((result or {}).get("uploaded", 0))
+            })
+            new_return = urlunsplit((split.scheme, split.netloc, split.path, urlencode(q), split.fragment))
+            return redirect(new_return)
+        # Si no hay URL de retorno, mostrar un mensaje simple
+        return f"Backup completed: <a href='{html_url}' target='_blank'>{html_url}</a>"
+    except Exception as exc:
+        logger.exception(f"GitHub UI backup failed: {exc}")
+        return f"Error: {exc}", 400

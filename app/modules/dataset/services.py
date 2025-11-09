@@ -1,10 +1,12 @@
 import hashlib
+import base64
 import logging
 import os
 import shutil
 import uuid
 from typing import Optional
 
+import requests
 from flask import request
 
 from app.modules.auth.services import AuthenticationService
@@ -212,3 +214,165 @@ class SizeService:
             return f"{round(size / (1024 ** 2), 2)} MB"
         else:
             return f"{round(size / (1024 ** 3), 2)} GB"
+
+
+def repo_name_formatting(name: str) -> str:
+    formated_name = name.strip().lower()
+    
+    formated_name = formated_name.replace(" ", "-")
+
+    # Para quitar caracteres raros
+    allowed = "abcdefghijklmnopqrstuvwxyz0123456789-_."
+    formated_name = "".join(ch for ch in formated_name if ch in allowed)
+    # Para evitar puntos/guiones/barras bajos al principio o final
+    formated_name = formated_name.strip("-._")
+
+    return formated_name or "dataset"
+
+
+class GitHubRepoService:
+
+    # Servicio para crear repositorios en GitHub usando la API REST y un token OAuth de usuario.
+
+    def __init__(self, token: str):
+        if not token:
+            raise RuntimeError("GitHub OAuth token is required.")
+        self.token = token
+        self.headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+
+    def create_repo(self, name: str, private: bool = True, description: Optional[str] = None) -> dict:
+        payload = {
+            "name": name,
+            "private": private,
+            "auto_init": False,
+            "has_issues": True,
+            "has_projects": False,
+            "has_wiki": False,
+            "description": description or "Backup created by PC-Hub",
+        }
+        # Crear el repositorio en la cuenta del usuario autenticado
+        url = "https://api.github.com/user/repos"
+
+        resp = requests.post(url, headers=self.headers, json=payload, timeout=30)
+        if resp.status_code not in (201,):
+            # Manejar errores de la API de GitHub
+            try:
+                data = resp.json()
+            except Exception:
+                data = None
+
+            message = None
+            reason = None
+            docs = None
+            if data:
+                message = data.get("message")
+                docs = data.get("documentation_url")
+                # Detectar errores específicos
+                # Error 422: nombre de repositorio ya existe
+                if resp.status_code == 422 and isinstance(data.get("errors"), list):
+                    for err in data.get("errors", []):
+                        if (
+                            err.get("resource") == "Repository"
+                            and err.get("field") == "name"
+                            and "already exists" in (err.get("message") or "")
+                        ):
+                            reason = "repo_exists"
+                            message = (
+                                "A repository with this name already exists in your account. "
+                                "Please change the dataset title or remove/rename the existing repository on GitHub."
+                            )
+                            break
+
+            if not message:
+                message = f"GitHub error ({resp.status_code})."
+
+            raise GitHubAPIError(status=resp.status_code, message=message, reason=reason, docs_url=docs, raw=data)
+        return resp.json()
+
+
+class GitHubAPIError(Exception):
+
+    def __init__(self, status: int, message: str, reason: Optional[str] = None, docs_url: Optional[str] = None, raw: Optional[dict] = None):
+        super().__init__(message)
+        self.status = status
+        self.message = message
+        self.reason = reason
+        self.docs_url = docs_url
+        self.raw = raw or {}
+
+
+class GitHubContentService:
+    # Servicio para subir archivos a un repositorio GitHub usando la API REST y un token OAuth de usuario.
+
+    def __init__(self, token: str, repo_full_name: str, branch: str = "main"):
+        if not token:
+            raise RuntimeError("GitHub OAuth token is required.")
+        if not repo_full_name:
+            raise RuntimeError("Repository full name required (owner/repo).")
+        self.token = token
+        self.repo = repo_full_name
+        self.branch = branch
+        self.base_url = f"https://api.github.com/repos/{self.repo}/contents"
+        self.headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+
+    def _get_file_sha(self, path: str) -> Optional[str]:
+        url = f"{self.base_url}/{path}"
+        params = {"ref": self.branch}
+        resp = requests.get(url, headers=self.headers, params=params, timeout=30)
+        if resp.status_code == 200:
+            return resp.json().get("sha")
+        return None
+
+    def _put_file(self, path: str, content_bytes: bytes, message: str) -> str:
+        sha = self._get_file_sha(path)
+        body = {
+            "message": message,
+            "content": base64.b64encode(content_bytes).decode("utf-8"),
+            "branch": self.branch,
+        }
+        if sha:
+            body["sha"] = sha
+
+        url = f"{self.base_url}/{path}"
+        resp = requests.put(url, headers=self.headers, json=body, timeout=60)
+        if resp.status_code not in (200, 201):
+            raise RuntimeError(f"GitHub upload error {resp.status_code}: {resp.text}")
+        return "updated" if sha else "uploaded"
+
+    def upload_dataset(self, dataset: DataSet, prefix: str = "") -> dict:
+        working_dir = os.getenv("WORKING_DIR", "")
+        source_dir = os.path.join(
+            working_dir,
+            "uploads",
+            f"user_{dataset.user_id}",
+            f"dataset_{dataset.id}",
+        )
+        if not os.path.isdir(source_dir):
+            raise RuntimeError(f"Dataset folder not found: {source_dir}")
+
+        uploaded_count = 0
+
+        for root, _, files in os.walk(source_dir):
+            for filename in files:
+                full_path = os.path.join(root, filename)
+                rel_path = os.path.relpath(full_path, source_dir).replace("\\", "/")
+                repo_path = f"{prefix}/{rel_path}" if prefix else rel_path
+                with open(full_path, "rb") as fh:
+                    content = fh.read()
+                action = self._put_file(
+                    repo_path,
+                    content,
+                    message=f"Backup dataset {dataset.id}: add {rel_path}",
+                )
+                if action == "uploaded":
+                    uploaded_count += 1
+
+        return {"uploaded": uploaded_count}
