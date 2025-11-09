@@ -166,6 +166,18 @@ def upgrade():
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('two_factor_tokens',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('code', sa.String(length=6), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('expires_at', sa.DateTime(), nullable=False),
+    sa.Column('used', sa.Boolean(), nullable=False, server_default=sa.false()),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id']),
+    sa.PrimaryKeyConstraint('id')
+    )
+    # Índice para búsquedas rápidas por usuario en tokens 2FA
+    op.create_index('ix_two_factor_tokens_user_id', 'two_factor_tokens', ['user_id'])
     # ### end Alembic commands ###
 
 
@@ -188,4 +200,6 @@ def downgrade():
     op.drop_table('fm_metrics')
     op.drop_table('ds_metrics')
     op.drop_table('doi_mapping')
+    op.drop_index('ix_two_factor_tokens_user_id', table_name='two_factor_tokens')
+    op.drop_table('two_factor_tokens')
     # ### end Alembic commands ###
