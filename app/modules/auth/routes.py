@@ -1,9 +1,9 @@
 import os
 import secrets
-import requests
 from urllib.parse import urlencode
 
-from flask import redirect, render_template, request, url_for, session, jsonify
+import requests
+from flask import jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_user, logout_user
 
 from app.modules.auth import auth_bp

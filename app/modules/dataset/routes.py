@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import uuid
 from datetime import datetime, timezone
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from zipfile import ZipFile
 
 from flask import (
@@ -15,11 +16,10 @@ from flask import (
     render_template,
     request,
     send_from_directory,
+    session,
     url_for,
 )
-from flask import session
 from flask_login import current_user, login_required
-from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
 from app.modules.dataset import dataset_bp
 from app.modules.dataset.forms import DataSetForm
@@ -31,8 +31,8 @@ from app.modules.dataset.services import (
     DSDownloadRecordService,
     DSMetaDataService,
     DSViewRecordService,
-    GitHubRepoService,
     GitHubContentService,
+    GitHubRepoService,
 )
 from app.modules.zenodo.services import ZenodoService
 
