@@ -1,5 +1,5 @@
-import hashlib
 import base64
+import hashlib
 import logging
 import os
 import shutil
@@ -218,7 +218,6 @@ class SizeService:
 
 def repo_name_formatting(name: str) -> str:
     formated_name = name.strip().lower()
-    
     formated_name = formated_name.replace(" ", "-")
 
     # Para quitar caracteres raros
@@ -296,7 +295,14 @@ class GitHubRepoService:
 
 class GitHubAPIError(Exception):
 
-    def __init__(self, status: int, message: str, reason: Optional[str] = None, docs_url: Optional[str] = None, raw: Optional[dict] = None):
+    def __init__(
+        self,
+        status: int,
+        message: str,
+        reason: Optional[str] = None,
+        docs_url: Optional[str] = None,
+        raw: Optional[dict] = None,
+    ):
         super().__init__(message)
         self.status = status
         self.message = message
