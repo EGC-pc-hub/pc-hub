@@ -4,6 +4,7 @@ from flask import url_for
 from app.modules.auth.repositories import UserRepository
 from app.modules.auth.services import AuthenticationService
 from app.modules.profile.repositories import UserProfileRepository
+from app.modules.twoauth.models import TwoFactorToken
 
 
 @pytest.fixture(scope="module")
@@ -72,7 +73,14 @@ def test_signup_user_successful(test_client):
         data=dict(name="Foo", surname="Example", email="foo@example.com", password="foo1234"),
         follow_redirects=True,
     )
-    assert response.request.path == url_for("public.index"), "Signup was unsuccessful"
+
+    assert response.request.path == url_for("twoauth.verify"), "No se mostró verificación 2FA tras signup"
+    assert UserRepository().get_by_email("foo@example.com") is None, "Usuario creado antes de verificar 2FA"
+
+    with test_client.session_transaction() as sess:
+        code = sess.get("pending_signup_2fa_code")
+        assert code is not None and len(code) == 6, "Código 2FA de signup no presente en sesión"
+
 
 
 def test_service_create_with_profie_success(clean_database):

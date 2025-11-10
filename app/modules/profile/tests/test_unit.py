@@ -12,6 +12,8 @@ def test_client(test_client):
     Extends the test_client fixture to add additional specific data for module testing.
     for module testing (por example, new users)
     """
+    test_client.application.config["ENABLE_2FA"] = False
+
     with test_client.application.app_context():
         user_test = User(email="user@example.com", password="test1234")
         db.session.add(user_test)
