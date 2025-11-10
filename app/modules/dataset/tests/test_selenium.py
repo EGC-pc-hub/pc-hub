@@ -309,3 +309,8 @@ if __name__ == "__main__":
     test_download_counter_refreshes_on_visibility_change()
     test_api_html_view_displays_datasets()
     test_download_counter_on_detail_page()
+# Call the test function
+if __name__ == "__main__":
+    # Allow running the test file directly for manual debugging, but don't execute
+    # when pytest/CI imports the module (prevents side-effects and unused-variable warnings).
+    test_upload_dataset()
