@@ -102,14 +102,15 @@ def test_signup_code_stored_in_session_and_email_sent(mock_send, test_client):
 
 
 def test_resend_signup_cooldown(monkeypatch, test_client):
-
     svc = TwoAuthService()
 
     with test_client.application.test_request_context("/"):
         session["pending_signup_2fa_last_sent"] = datetime.now(timezone.utc).isoformat()
         assert svc.can_resend_signup() is False
 
-    fake_now = lambda tz=timezone.utc: datetime.now(timezone.utc) + timedelta(seconds=61)
+    def fake_now(tz=timezone.utc):
+        return datetime.now(timezone.utc) + timedelta(seconds=61)
+
     monkeypatch.setattr(
         "app.modules.twoauth.services.datetime",
         type("_dt", (), {"now": staticmethod(fake_now), "timezone": timezone, "timedelta": timedelta}),
