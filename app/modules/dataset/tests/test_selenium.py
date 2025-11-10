@@ -206,12 +206,6 @@ def test_download_counter_refreshes_on_visibility_change():
             dataset_id = counter_element.get_attribute("data-download-counter")
             initial_count = int(counter_element.text.strip())
 
-            # Download the dataset in a new tab to increment counter
-            download_button = driver.find_element(
-                By.CSS_SELECTOR,
-                f"[data-download-btn][data-dataset-id='{dataset_id}']"
-            )
-
             # Open download in new tab
             original_window = driver.current_window_handle
             driver.execute_script(
