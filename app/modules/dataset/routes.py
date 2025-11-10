@@ -24,7 +24,6 @@ from flask_login import current_user, login_required
 from app import db
 from app.modules.dataset import dataset_bp
 from app.modules.dataset.forms import DataSetForm
-from app.modules.dataset.models import DSDownloadRecord
 from app.modules.dataset.services import (
     AuthorService,
     DataSetService,
@@ -220,6 +219,7 @@ def download_dataset(dataset_id):
         )
 
     # Record every download in the database
+    # Always record the download (count each download separately)
     DSDownloadRecordService().create(
         user_id=current_user.id if current_user.is_authenticated else None,
         dataset_id=dataset_id,
@@ -232,6 +232,51 @@ def download_dataset(dataset_id):
     db.session.commit()
 
     return resp
+
+
+@dataset_bp.route("/dataset/api/trending", methods=["GET"])
+def api_trending():
+    """
+    WI101: API endpoint para obtener trending datasets en formato JSON.
+
+    PROPÓSITO:
+    ----------
+    Este endpoint permite que el frontend pueda refrescar el widget de trending
+    datasets sin recargar toda la página, habilitando futuras funcionalidades
+    como actualización automática o interactividad AJAX.
+
+    ENDPOINT:
+    ---------
+    GET /dataset/api/trending
+
+    RESPUESTA:
+    ----------
+    JSON array con el mismo formato que trending_datasets_last_week():
+    [
+        {
+            "id": 123,
+            "title": "Mi Dataset",
+            "main_author": "Autor Principal",
+            "downloads": 15,
+            "url": "http://domain/doi/10.1234/dataset"
+        },
+        ...
+    ]
+
+    USO ACTUAL:
+    -----------
+    Principalmente utilizado en tests para verificar la API.
+    El widget actual carga los datos directamente desde el template.
+
+    USO FUTURO:
+    -----------
+    Podría usarse para:
+    - Auto-refresh del widget cada X minutos
+    - Dashboard de estadísticas en tiempo real
+    - Integración con aplicaciones externas
+    """
+    trending = DataSetService().trending_datasets_last_week(limit=3)
+    return jsonify(trending)
 
 
 @dataset_bp.route("/doi/<path:doi>/", methods=["GET"])
