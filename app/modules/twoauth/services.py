@@ -3,7 +3,6 @@ from datetime import datetime, timedelta, timezone
 
 from flask import current_app, session
 from flask_mail import Message
-from email.utils import parseaddr
 
 from app import db, mail
 from app.modules.twoauth.models import TwoFactorToken

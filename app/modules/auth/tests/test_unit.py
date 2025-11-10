@@ -4,7 +4,6 @@ from flask import url_for
 from app.modules.auth.repositories import UserRepository
 from app.modules.auth.services import AuthenticationService
 from app.modules.profile.repositories import UserProfileRepository
-from app.modules.twoauth.models import TwoFactorToken
 
 
 @pytest.fixture(scope="module")
@@ -82,10 +81,8 @@ def test_signup_user_successful(test_client):
         assert code is not None and len(code) == 6, "Código 2FA de signup no presente en sesión"
 
 
-
 def test_service_create_with_profie_success(clean_database):
     data = {"name": "Test", "surname": "Foo", "email": "service_test@example.com", "password": "test1234"}
-
     AuthenticationService().create_with_profile(**data)
 
     assert UserRepository().count() == 1

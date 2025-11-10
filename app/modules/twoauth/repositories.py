@@ -9,7 +9,7 @@ class TwoFactorTokenRepository(BaseRepository):
     def latest_active_for_user(self, user_id: int):
         return (
             self.session.query(TwoFactorToken)
-            .filter(TwoFactorToken.user_id == user_id, TwoFactorToken.used == False)
+            .filter(TwoFactorToken.user_id == user_id, TwoFactorToken.used.is_(False))
             .order_by(TwoFactorToken.created_at.desc())
             .first()
         )

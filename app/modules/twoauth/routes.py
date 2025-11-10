@@ -63,7 +63,6 @@ def verify():
             if code != code_stored:
                 return render_template("twoauth/verify_form.html", form=form, error="Código inválido o caducado")
 
-
             pdata = session.get("pending_signup")
             if not pdata:
                 return redirect(url_for("auth.login"))
@@ -71,7 +70,6 @@ def verify():
                 user = auth_service.create_with_profile(**pdata)
             except Exception as exc:
                 return render_template("twoauth/verify_form.html", form=form, error=f"Error creando cuenta: {exc}")
-
 
             login_user(user, remember=True)
             session.pop("pending_signup", None)
@@ -83,7 +81,7 @@ def verify():
     return render_template("twoauth/verify_form.html", form=form)
 
 
-@twoauth_bp.route("/2auth/resend", methods=["GET"]) 
+@twoauth_bp.route("/2auth/resend", methods=["GET"])
 def resend():
     if current_user.is_authenticated:
         return redirect(url_for("public.index"))
@@ -98,7 +96,6 @@ def resend():
             return redirect(url_for("twoauth.verify"))
         service.create_and_send_code(user)
         return redirect(url_for("twoauth.verify"))
-
 
     pending = session.get("pending_signup")
     if not pending:
