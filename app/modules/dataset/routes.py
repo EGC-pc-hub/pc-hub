@@ -21,6 +21,7 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
+from app import db
 from app.modules.dataset import dataset_bp
 from app.modules.dataset.forms import DataSetForm
 from app.modules.dataset.models import DSDownloadRecord
@@ -218,21 +219,17 @@ def download_dataset(dataset_id):
             mimetype="application/zip",
         )
 
-    # Check if the download record already exists for this cookie
-    existing_record = DSDownloadRecord.query.filter_by(
+    # Record every download in the database
+    DSDownloadRecordService().create(
         user_id=current_user.id if current_user.is_authenticated else None,
         dataset_id=dataset_id,
+        download_date=datetime.now(timezone.utc),
         download_cookie=user_cookie,
-    ).first()
+    )
 
-    if not existing_record:
-        # Record the download in your database
-        DSDownloadRecordService().create(
-            user_id=current_user.id if current_user.is_authenticated else None,
-            dataset_id=dataset_id,
-            download_date=datetime.now(timezone.utc),
-            download_cookie=user_cookie,
-        )
+    # Increment the download count for every download
+    dataset.download_count += 1
+    db.session.commit()
 
     return resp
 
@@ -420,3 +417,39 @@ def backup_dataset_github_ui(dataset_id):
     except Exception as exc:
         logger.exception(f"GitHub UI backup failed: {exc}")
         return f"Error: {exc}", 400
+
+
+@dataset_bp.route("/dataset/api", methods=["GET"])
+def api_datasets_view():
+    """Returns an HTML view of all datasets with their information"""
+    from app.modules.dataset.models import DataSet
+
+    datasets = DataSet.query.all()
+    return render_template("dataset/api_datasets.html", datasets=datasets)
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/stats", methods=["GET"])
+def get_dataset_stats(dataset_id):
+    """Returns statistics for a dataset including downloads, views, files count, etc."""
+    dataset = dataset_service.get_or_404(dataset_id)
+
+    # Count downloads (unique download records for this dataset)
+    download_records = DSDownloadRecord.query.filter_by(dataset_id=dataset_id).count()
+
+    # Count views (unique view records for this dataset)
+    view_records = ds_view_record_service.repository.model.query.filter_by(dataset_id=dataset_id).count()
+
+    return jsonify(
+        {
+            "dataset_id": dataset.id,
+            "title": dataset.ds_meta_data.title,
+            "download_count": dataset.download_count,
+            "unique_downloads": download_records,
+            "unique_views": view_records,
+            "files_count": dataset.get_files_count(),
+            "total_size_bytes": dataset.get_file_total_size(),
+            "total_size_human": dataset.get_file_total_size_for_human(),
+            "created_at": dataset.created_at.isoformat(),
+            "url": dataset.get_uvlhub_doi(),
+        }
+    )
