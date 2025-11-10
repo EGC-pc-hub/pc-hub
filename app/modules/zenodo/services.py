@@ -20,6 +20,11 @@ load_dotenv()
 class ZenodoService(BaseService):
 
     def get_zenodo_url(self):
+        # Si está la url del fakenodo configurado en las variables de entorno se usa esa
+        fake_url = os.getenv("FAKENODO_URL")
+        if fake_url:
+            logger.info(f"Usando FAKENODO_URL: {fake_url}")
+            return fake_url.rstrip("/")
 
         FLASK_ENV = os.getenv("FLASK_ENV", "development")
         ZENODO_API_URL = ""
