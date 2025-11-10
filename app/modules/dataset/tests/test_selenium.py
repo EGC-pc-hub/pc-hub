@@ -148,26 +148,27 @@ def test_download_counter_increments():
             # Find the first download counter
             counter_element = driver.find_element(By.CSS_SELECTOR, "[data-download-counter]")
             initial_count = int(counter_element.text.strip())
-            
+
             # Get the dataset ID
             dataset_id = counter_element.get_attribute("data-download-counter")
-            
+
             # Find the corresponding download button
             download_button = driver.find_element(
-                By.CSS_SELECTOR, 
-                f"[data-download-btn][data-dataset-id='{dataset_id}']"
+                By.CSS_SELECTOR, f"[data-download-btn][data-dataset-id='{dataset_id}']"
             )
-            
+
             # Click the download button
             download_button.click()
             time.sleep(2)  # Wait for download to trigger
-            
+
             # Verify counter incremented without page refresh
             updated_count = int(counter_element.text.strip())
-            assert updated_count == initial_count + 1, f"Counter should increment from {initial_count} to {initial_count + 1}, but got {updated_count}"
-            
+            assert (
+                updated_count == initial_count + 1
+            ), f"Counter should increment from {initial_count} to {initial_count + 1}, but got {updated_count}"
+
             print("Download counter test passed!")
-            
+
         except Exception as e:
             print(f"Test skipped or failed: {e}")
             # If no datasets available, skip the test
@@ -193,32 +194,31 @@ def test_download_counter_refreshes_on_visibility_change():
             counter_element = driver.find_element(By.CSS_SELECTOR, "[data-download-counter]")
             dataset_id = counter_element.get_attribute("data-download-counter")
             initial_count = int(counter_element.text.strip())
-            
+
             # Download the dataset in a new tab to increment counter
             download_button = driver.find_element(
-                By.CSS_SELECTOR, 
-                f"[data-download-btn][data-dataset-id='{dataset_id}']"
+                By.CSS_SELECTOR, f"[data-download-btn][data-dataset-id='{dataset_id}']"
             )
-            
+
             # Open download in new tab
             original_window = driver.current_window_handle
             driver.execute_script(f"window.open('{host}/dataset/download/{dataset_id}', '_blank');")
             time.sleep(2)
-            
+
             # Switch back to original tab
             driver.switch_to.window(original_window)
             time.sleep(1)
-            
+
             # Trigger visibility change by switching tabs
             driver.execute_script("document.dispatchEvent(new Event('visibilitychange'));")
             time.sleep(3)  # Wait for refresh
-            
+
             # Check if counter updated
             updated_count = int(counter_element.text.strip())
             assert updated_count >= initial_count, "Counter should have been refreshed"
-            
+
             print("Visibility change test passed!")
-            
+
         except Exception as e:
             print(f"Test skipped or failed: {e}")
             pass
@@ -240,19 +240,19 @@ def test_api_html_view_displays_datasets():
 
         # Verify page loaded by checking URL
         assert "/dataset/api" in driver.current_url, f"Page should navigate to /dataset/api, got {driver.current_url}"
-        
+
         # Verify table exists
         try:
             table = driver.find_element(By.CSS_SELECTOR, "table")
             assert table is not None, "Table should be present"
-            
+
             # Verify download counter column exists (or just verify table has data)
             rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
             if rows:
                 print(f"API HTML view test passed! Found {len(rows)} datasets in table.")
             else:
                 print("API HTML view test passed! Table is present but may be empty.")
-            
+
         except Exception as e:
             print(f"Test skipped or failed: {e}")
             pass
@@ -276,24 +276,24 @@ def test_download_counter_on_detail_page():
             # Find a dataset link
             dataset_link = driver.find_element(By.CSS_SELECTOR, "a[href*='/doi/']")
             dataset_url = dataset_link.get_attribute("href")
-            
+
             # Open dataset detail page
             driver.get(dataset_url)
             wait_for_page_to_load(driver)
-            
+
             # Verify download counter is present
             counter_element = driver.find_element(By.CSS_SELECTOR, "[data-download-counter]")
             assert counter_element is not None, "Download counter should be present"
-            
+
             count = int(counter_element.text.strip())
             assert count >= 0, "Download count should be >= 0"
-            
+
             # Verify download button is present
             download_button = driver.find_element(By.CSS_SELECTOR, "[data-download-btn]")
             assert download_button is not None, "Download button should be present"
-            
+
             print("Detail page counter test passed!")
-            
+
         except Exception as e:
             print(f"Test skipped or failed: {e}")
             pass
