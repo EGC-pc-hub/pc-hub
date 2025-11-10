@@ -93,20 +93,51 @@ class DataSetService(BaseService):
         return self.dsviewrecord_repostory.total_dataset_views()
 
     def trending_datasets_last_week(self, limit: int = 3):
-        """Return top `limit` datasets downloaded in the previous calendar week.
-
-        Previous calendar week = the week before the current week, from Monday 00:00 UTC to the next Monday 00:00 UTC (exclusive).
-
-        Each item is a dict with keys: id, title, main_author, downloads, url
         """
-        from datetime import datetime, timezone, timedelta
+        WI101: Retorna los datasets más descargados en la semana anterior.
+
+        LÓGICA DE NEGOCIO:
+        ------------------
+        "Semana anterior" se define como la semana calendario previa a la semana actual,
+        de lunes 00:00 UTC a lunes 00:00 UTC (exclusive).
+
+        Ejemplo:
+        - Si hoy es miércoles 8 de noviembre de 2025:
+          - Semana actual: lunes 4 nov - domingo 10 nov
+          - Semana anterior: lunes 28 oct - domingo 3 nov
+          - El método retorna datasets descargados entre 28 oct y 4 nov
+
+        RETORNO:
+        --------
+        Cada item es un diccionario con:
+        - id: ID del dataset
+        - title: Título del dataset
+        - main_author: Nombre del primer autor (o None si no hay)
+        - downloads: Número de descargas en la semana anterior
+        - url: URL del dataset en uvlhub (DOI)
+
+        ORDEN:
+        ------
+        Los datasets se retornan ordenados por número de descargas descendente.
+        Si hay empates, el orden puede variar entre ejecuciones.
+
+        Args:
+            limit: Número máximo de datasets a retornar (por defecto 3 para el widget)
+
+        Returns:
+            Lista de diccionarios con la información de cada dataset
+        """
+        from datetime import datetime, timedelta, timezone
 
         now = datetime.now(timezone.utc)
         # start of current week (Monday 00:00 UTC)
-        start_of_week = datetime(year=now.year, month=now.month, day=now.day, tzinfo=timezone.utc) - timedelta(days=now.weekday())
+        start_of_week = datetime(year=now.year, month=now.month, day=now.day, tzinfo=timezone.utc) - timedelta(
+            days=now.weekday()
+        )
         last_week_start = start_of_week - timedelta(days=7)
         last_week_end = start_of_week
 
+        # Obtener los dataset_id más descargados en el período
         top = self.dsdownloadrecord_repository.top_downloaded_in_period(last_week_start, limit, until=last_week_end)
         results = []
         for item in top:
@@ -136,11 +167,31 @@ class DataSetService(BaseService):
         return results
 
     def trending_datasets_this_week(self, limit: int = 3):
-        """Return top `limit` datasets downloaded since the start of the current week (Monday 00:00 UTC).
-
-        Each item is a dict with keys: id, title, main_author, downloads, url
         """
-        from datetime import datetime, timezone, timedelta
+        WI101: Retorna los datasets más descargados en la semana actual.
+
+        LÓGICA DE NEGOCIO:
+        ------------------
+        "Semana actual" se define desde el lunes de esta semana a las 00:00 UTC
+        hasta el momento actual.
+
+        DIFERENCIA CON trending_datasets_last_week():
+        ----------------------------------------------
+        - trending_datasets_last_week(): Semana completa anterior (7 días completos)
+        - trending_datasets_this_week(): Semana actual en progreso (puede ser 1-7 días)
+
+        NOTA:
+        -----
+        Esta función se creó para posibles extensiones futuras del widget.
+        Actualmente el widget usa solo trending_datasets_last_week().
+
+        Args:
+            limit: Número máximo de datasets a retornar
+
+        Returns:
+            Lista de diccionarios con la información de cada dataset (mismo formato que last_week)
+        """
+        from datetime import datetime, timedelta, timezone
 
         now = datetime.now(timezone.utc)
         # Monday is weekday 0. Compute start of week (Monday 00:00:00)
