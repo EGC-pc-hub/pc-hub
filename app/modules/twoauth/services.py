@@ -98,6 +98,7 @@ class TwoAuthService:
             return False
         if expires.tzinfo is None:
             from datetime import datetime as _dt
+
             if _dt.utcnow() > expires:
                 return False
         else:
