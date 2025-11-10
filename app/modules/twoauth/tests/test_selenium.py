@@ -12,7 +12,6 @@ def test_twoauth_and_check_form():
     try:
         host = get_host_for_selenium_testing()
 
-  
         driver.get(f"{host}/login")
         time.sleep(2)
         email_field = driver.find_element(By.NAME, "email")
@@ -31,6 +30,4 @@ def test_twoauth_and_check_form():
         close_driver(driver)
 
 
-
 test_twoauth_and_check_form()
-
