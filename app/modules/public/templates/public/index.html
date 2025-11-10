@@ -116,27 +116,38 @@
 
             <div class="row">
 
-                <!-- Trending datasets (top 3 downloads last week) -->
+                <!-- WI101: Widget de Trending datasets (top 3 descargas semana pasada) -->
+                <!-- IMPLEMENTACIÓN:
+                     - Muestra los 3 datasets más descargados de la semana anterior
+                     - Datos provenientes de la variable trending_datasets (public/routes.py)
+                     - Formato: título (enlace), autor, número de descargas
+                     - Incluye atributo data-dsid para facilitar tests de Selenium
+                -->
                 <div class="col-12">
                     <div class="card">
                         <div class="card-body">
                             <h2> <b>Trending datasets (last week)</b> </h2>
                             <div class="mb-2" id="trending-container">
                                 {% if trending_datasets and trending_datasets|length > 0 %}
+                                    <!-- Lista de trending datasets -->
                                     <ul class="list-unstyled" id="trending-list">
                                         {% for ds in trending_datasets %}
                                             <li class="mb-3" data-dsid="{{ ds.id }}">
+                                                <!-- Título del dataset como enlace -->
                                                 <a href="{{ ds.url }}">{{ ds.title }}</a>
+                                                <!-- Información adicional: autor y número de descargas -->
                                                 <div class="text-small text-secondary">
                                                     {% if ds.main_author %}
                                                         {{ ds.main_author }} &nbsp;|
                                                     {% endif %}
+                                                    <!-- Clase trending-downloads para facilitar tests -->
                                                     <span class="trending-downloads">{{ ds.downloads }}</span> downloads
                                                 </div>
                                             </li>
                                         {% endfor %}
                                     </ul>
                                 {% else %}
+                                    <!-- Mensaje cuando no hay datos de trending -->
                                     <p class="text-secondary" id="trending-empty">No trending datasets for last week.</p>
                                 {% endif %}
                             </div>
