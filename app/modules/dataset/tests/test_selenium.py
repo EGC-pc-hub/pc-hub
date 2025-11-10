@@ -10,8 +10,9 @@ from core.selenium.common import close_driver, initialize_driver
 
 
 def wait_for_page_to_load(driver, timeout=4):
-    WebDriverWait(driver, timeout).until(lambda driver: driver.execute_script(
-        "return document.readyState") == "complete")
+    WebDriverWait(driver, timeout).until(
+        lambda driver: driver.execute_script("return document.readyState") == "complete"
+    )
 
 
 def count_datasets(driver, host):
@@ -19,10 +20,7 @@ def count_datasets(driver, host):
     wait_for_page_to_load(driver)
 
     try:
-        amount_datasets = len(
-            driver.find_elements(
-                By.XPATH,
-                "//table//tbody//tr"))
+        amount_datasets = len(driver.find_elements(By.XPATH, "//table//tbody//tr"))
     except Exception:
         amount_datasets = 0
     return amount_datasets
@@ -74,23 +72,19 @@ def test_upload_dataset():
 
         name_field0 = driver.find_element(By.NAME, "authors-0-name")
         name_field0.send_keys("Author0")
-        affiliation_field0 = driver.find_element(
-            By.NAME, "authors-0-affiliation")
+        affiliation_field0 = driver.find_element(By.NAME, "authors-0-affiliation")
         affiliation_field0.send_keys("Club0")
         orcid_field0 = driver.find_element(By.NAME, "authors-0-orcid")
         orcid_field0.send_keys("0000-0000-0000-0000")
 
         name_field1 = driver.find_element(By.NAME, "authors-1-name")
         name_field1.send_keys("Author1")
-        affiliation_field1 = driver.find_element(
-            By.NAME, "authors-1-affiliation")
+        affiliation_field1 = driver.find_element(By.NAME, "authors-1-affiliation")
         affiliation_field1.send_keys("Club1")
 
         # Obtén las rutas absolutas de los archivos
-        file1_path = os.path.abspath(
-            "app/modules/dataset/uvl_examples/file1.uvl")
-        file2_path = os.path.abspath(
-            "app/modules/dataset/uvl_examples/file2.uvl")
+        file1_path = os.path.abspath("app/modules/dataset/uvl_examples/file1.uvl")
+        file2_path = os.path.abspath("app/modules/dataset/uvl_examples/file2.uvl")
 
         # Subir el primer archivo
         dropzone = driver.find_element(By.CLASS_NAME, "dz-hidden-input")
@@ -105,16 +99,13 @@ def test_upload_dataset():
         # Add authors in UVL models
         show_button = driver.find_element(By.ID, "0_button")
         show_button.send_keys(Keys.RETURN)
-        add_author_uvl_button = driver.find_element(
-            By.ID, "0_form_authors_button")
+        add_author_uvl_button = driver.find_element(By.ID, "0_form_authors_button")
         add_author_uvl_button.send_keys(Keys.RETURN)
         wait_for_page_to_load(driver)
 
-        name_field = driver.find_element(
-            By.NAME, "feature_models-0-authors-2-name")
+        name_field = driver.find_element(By.NAME, "feature_models-0-authors-2-name")
         name_field.send_keys("Author3")
-        affiliation_field = driver.find_element(
-            By.NAME, "feature_models-0-authors-2-affiliation")
+        affiliation_field = driver.find_element(By.NAME, "feature_models-0-authors-2-affiliation")
         affiliation_field.send_keys("Club3")
 
         # Check I agree and send form
@@ -155,8 +146,7 @@ def test_download_counter_increments():
         # Find a dataset download button and counter
         try:
             # Find the first download counter
-            counter_element = driver.find_element(
-                By.CSS_SELECTOR, "[data-download-counter]")
+            counter_element = driver.find_element(By.CSS_SELECTOR, "[data-download-counter]")
             initial_count = int(counter_element.text.strip())
 
             # Get the dataset ID
@@ -164,8 +154,7 @@ def test_download_counter_increments():
 
             # Find the corresponding download button
             download_button = driver.find_element(
-                By.CSS_SELECTOR,
-                f"[data-download-btn][data-dataset-id='{dataset_id}']"
+                By.CSS_SELECTOR, f"[data-download-btn][data-dataset-id='{dataset_id}']"
             )
 
             # Click the download button
@@ -174,8 +163,9 @@ def test_download_counter_increments():
 
             # Verify counter incremented without page refresh
             updated_count = int(counter_element.text.strip())
-            assert updated_count == initial_count + \
-                1, f"Counter should increment from {initial_count} to {initial_count + 1}, but got {updated_count}"
+            assert (
+                updated_count == initial_count + 1
+            ), f"Counter should increment from {initial_count} to {initial_count + 1}, but got {updated_count}"
 
             print("Download counter test passed!")
 
@@ -201,15 +191,13 @@ def test_download_counter_refreshes_on_visibility_change():
 
         try:
             # Find a dataset and get initial counter
-            counter_element = driver.find_element(
-                By.CSS_SELECTOR, "[data-download-counter]")
+            counter_element = driver.find_element(By.CSS_SELECTOR, "[data-download-counter]")
             dataset_id = counter_element.get_attribute("data-download-counter")
             initial_count = int(counter_element.text.strip())
 
             # Open download in new tab
             original_window = driver.current_window_handle
-            driver.execute_script(
-                f"window.open('{host}/dataset/download/{dataset_id}', '_blank');")
+            driver.execute_script(f"window.open('{host}/dataset/download/{dataset_id}', '_blank');")
             time.sleep(2)
 
             # Switch back to original tab
@@ -217,8 +205,7 @@ def test_download_counter_refreshes_on_visibility_change():
             time.sleep(1)
 
             # Trigger visibility change by switching tabs
-            driver.execute_script(
-                "document.dispatchEvent(new Event('visibilitychange'));")
+            driver.execute_script("document.dispatchEvent(new Event('visibilitychange'));")
             time.sleep(3)  # Wait for refresh
 
             # Check if counter updated
@@ -247,7 +234,9 @@ def test_api_html_view_displays_datasets():
         wait_for_page_to_load(driver)
 
         # Verify page loaded by checking URL
-        assert "/dataset/api" in driver.current_url, f"Page should navigate to /dataset/api, got {
+        assert (
+            "/dataset/api" in driver.current_url
+        ), f"Page should navigate to /dataset/api, got {
             driver.current_url}"
 
         # Verify table exists
@@ -261,7 +250,8 @@ def test_api_html_view_displays_datasets():
             if rows:
                 print(
                     f"API HTML view test passed! Found {
-                        len(rows)} datasets in table.")
+                        len(rows)} datasets in table."
+                )
             else:
                 print("API HTML view test passed! Table is present but may be empty.")
 
@@ -286,8 +276,7 @@ def test_download_counter_on_detail_page():
 
         try:
             # Find a dataset link
-            dataset_link = driver.find_element(
-                By.CSS_SELECTOR, "a[href*='/doi/']")
+            dataset_link = driver.find_element(By.CSS_SELECTOR, "a[href*='/doi/']")
             dataset_url = dataset_link.get_attribute("href")
 
             # Open dataset detail page
@@ -295,16 +284,14 @@ def test_download_counter_on_detail_page():
             wait_for_page_to_load(driver)
 
             # Verify download counter is present
-            counter_element = driver.find_element(
-                By.CSS_SELECTOR, "[data-download-counter]")
+            counter_element = driver.find_element(By.CSS_SELECTOR, "[data-download-counter]")
             assert counter_element is not None, "Download counter should be present"
 
             count = int(counter_element.text.strip())
             assert count >= 0, "Download count should be >= 0"
 
             # Verify download button is present
-            download_button = driver.find_element(
-                By.CSS_SELECTOR, "[data-download-btn]")
+            download_button = driver.find_element(By.CSS_SELECTOR, "[data-download-btn]")
             assert download_button is not None, "Download button should be present"
 
             print("Detail page counter test passed!")

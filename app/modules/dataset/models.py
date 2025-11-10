@@ -38,10 +38,7 @@ class Author(db.Model):
     fm_meta_data_id = db.Column(db.Integer, db.ForeignKey("fm_meta_data.id"))
 
     def to_dict(self):
-        return {
-            "name": self.name,
-            "affiliation": self.affiliation,
-            "orcid": self.orcid}
+        return {"name": self.name, "affiliation": self.affiliation, "orcid": self.orcid}
 
 
 class DSMetrics(db.Model):
@@ -60,44 +57,25 @@ class DSMetaData(db.Model):
     deposition_id = db.Column(db.Integer)
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    publication_type = db.Column(
-        SQLAlchemyEnum(PublicationType),
-        nullable=False)
+    publication_type = db.Column(SQLAlchemyEnum(PublicationType), nullable=False)
     publication_doi = db.Column(db.String(120))
     dataset_doi = db.Column(db.String(120))
     tags = db.Column(db.String(120))
     ds_metrics_id = db.Column(db.Integer, db.ForeignKey("ds_metrics.id"))
-    ds_metrics = db.relationship(
-        "DSMetrics",
-        uselist=False,
-        backref="ds_meta_data",
-        cascade="all, delete")
-    authors = db.relationship(
-        "Author",
-        backref="ds_meta_data",
-        lazy=True,
-        cascade="all, delete")
+    ds_metrics = db.relationship("DSMetrics", uselist=False, backref="ds_meta_data", cascade="all, delete")
+    authors = db.relationship("Author", backref="ds_meta_data", lazy=True, cascade="all, delete")
 
 
 class DataSet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
-    ds_meta_data_id = db.Column(
-        db.Integer,
-        db.ForeignKey("ds_meta_data.id"),
-        nullable=False)
+    ds_meta_data_id = db.Column(db.Integer, db.ForeignKey("ds_meta_data.id"), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now())
     download_count = db.Column(db.Integer, nullable=False, default=0)
 
-    ds_meta_data = db.relationship(
-        "DSMetaData", backref=db.backref(
-            "data_set", uselist=False))
-    feature_models = db.relationship(
-        "FeatureModel",
-        backref="data_set",
-        lazy=True,
-        cascade="all, delete")
+    ds_meta_data = db.relationship("DSMetaData", backref=db.backref("data_set", uselist=False))
+    feature_models = db.relationship("FeatureModel", backref="data_set", lazy=True, cascade="all, delete")
 
     def name(self):
         return self.ds_meta_data.title
@@ -110,19 +88,21 @@ class DataSet(db.Model):
         db.session.commit()
 
     def get_cleaned_publication_type(self):
-        return self.ds_meta_data.publication_type.name.replace(
-            "_", " ").title()
+        return self.ds_meta_data.publication_type.name.replace("_", " ").title()
 
     def get_zenodo_url(self):
-        return f"https://zenodo.org/record/{
-            self.ds_meta_data.deposition_id}" if self.ds_meta_data.dataset_doi else None
+        return (
+            f"https://zenodo.org/record/{
+            self.ds_meta_data.deposition_id}"
+            if self.ds_meta_data.dataset_doi
+            else None
+        )
 
     def get_files_count(self):
         return sum(len(fm.files) for fm in self.feature_models)
 
     def get_file_total_size(self):
-        return sum(
-            file.size for fm in self.feature_models for file in fm.files)
+        return sum(file.size for fm in self.feature_models for file in fm.files)
 
     def get_file_total_size_for_human(self):
         from app.modules.dataset.services import SizeService
@@ -167,12 +147,8 @@ class DSDownloadRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     dataset_id = db.Column(db.Integer, db.ForeignKey("data_set.id"))
-    download_date = db.Column(
-        db.DateTime,
-        nullable=False,
-        default=datetime.utcnow)
-    download_cookie = db.Column(db.String(36),
-                                nullable=False)  # Assuming UUID4 strings
+    download_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    download_cookie = db.Column(db.String(36), nullable=False)  # Assuming UUID4 strings
 
     def __repr__(self):
         return (
@@ -188,8 +164,7 @@ class DSViewRecord(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     dataset_id = db.Column(db.Integer, db.ForeignKey("data_set.id"))
     view_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    view_cookie = db.Column(db.String(36),
-                            nullable=False)  # Assuming UUID4 strings
+    view_cookie = db.Column(db.String(36), nullable=False)  # Assuming UUID4 strings
 
     def __repr__(self):
         return f"<View id={

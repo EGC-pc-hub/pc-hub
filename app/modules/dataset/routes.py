@@ -57,50 +57,42 @@ def create_dataset():
 
         try:
             logger.info("Creating dataset...")
-            dataset = dataset_service.create_from_form(
-                form=form, current_user=current_user)
+            dataset = dataset_service.create_from_form(form=form, current_user=current_user)
             logger.info(f"Created dataset: {dataset}")
             dataset_service.move_feature_models(dataset)
         except Exception as exc:
-            logger.exception(
-                f"Exception while create dataset data in local {exc}")
-            return jsonify(
-                {"Exception while create dataset data in local: ": str(exc)}), 400
+            logger.exception(f"Exception while create dataset data in local {exc}")
+            return jsonify({"Exception while create dataset data in local: ": str(exc)}), 400
 
         # send dataset as deposition to Zenodo
         data = {}
         try:
-            zenodo_response_json = zenodo_service.create_new_deposition(
-                dataset)
+            zenodo_response_json = zenodo_service.create_new_deposition(dataset)
             response_data = json.dumps(zenodo_response_json)
             data = json.loads(response_data)
         except Exception as exc:
             data = {}
             zenodo_response_json = {}
-            logger.exception(
-                f"Exception while create dataset data in Zenodo {exc}")
+            logger.exception(f"Exception while create dataset data in Zenodo {exc}")
 
         if data.get("conceptrecid"):
             deposition_id = data.get("id")
 
             # update dataset with deposition id in Zenodo
-            dataset_service.update_dsmetadata(
-                dataset.ds_meta_data_id, deposition_id=deposition_id)
+            dataset_service.update_dsmetadata(dataset.ds_meta_data_id, deposition_id=deposition_id)
 
             try:
                 # iterate for each feature model (one feature model = one
                 # request to Zenodo)
                 for feature_model in dataset.feature_models:
-                    zenodo_service.upload_file(
-                        dataset, deposition_id, feature_model)
+                    zenodo_service.upload_file(dataset, deposition_id, feature_model)
 
                 # publish deposition
                 zenodo_service.publish_deposition(deposition_id)
 
                 # update DOI
                 deposition_doi = zenodo_service.get_doi(deposition_id)
-                dataset_service.update_dsmetadata(
-                    dataset.ds_meta_data_id, dataset_doi=deposition_doi)
+                dataset_service.update_dsmetadata(dataset.ds_meta_data_id, dataset_doi=deposition_doi)
             except Exception as e:
                 msg = f"it has not been possible upload feature models in Zenodo and update the DOI: {e}"
                 return jsonify({"message": msg}), 200
@@ -145,10 +137,7 @@ def upload():
         # Generate unique filename (by recursion)
         base_name, extension = os.path.splitext(file.filename)
         i = 1
-        while os.path.exists(
-            os.path.join(
-                temp_folder,
-                f"{base_name} ({i}){extension}")):
+        while os.path.exists(os.path.join(temp_folder, f"{base_name} ({i}){extension}")):
             i += 1
         new_filename = f"{base_name} ({i}){extension}"
         file_path = os.path.join(temp_folder, new_filename)
@@ -201,8 +190,10 @@ def download_dataset(dataset_id):
 
                 relative_path = os.path.relpath(full_path, file_path)
 
-                zipf.write(full_path, arcname=os.path.join(
-                    os.path.basename(zip_path[:-4]), relative_path), )
+                zipf.write(
+                    full_path,
+                    arcname=os.path.join(os.path.basename(zip_path[:-4]), relative_path),
+                )
 
     user_cookie = request.cookies.get("download_cookie")
     if not user_cookie:
@@ -248,11 +239,7 @@ def subdomain_index(doi):
     new_doi = doi_mapping_service.get_new_doi(doi)
     if new_doi:
         # Redirect to the same path with the new DOI
-        return redirect(
-            url_for(
-                "dataset.subdomain_index",
-                doi=new_doi),
-            code=302)
+        return redirect(url_for("dataset.subdomain_index", doi=new_doi), code=302)
 
     # Try to search the dataset by the provided DOI (which should already be
     # the new one)
@@ -266,10 +253,7 @@ def subdomain_index(doi):
 
     # Save the cookie to the user's browser
     user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
-    resp = make_response(
-        render_template(
-            "dataset/view_dataset.html",
-            dataset=dataset))
+    resp = make_response(render_template("dataset/view_dataset.html", dataset=dataset))
     resp.set_cookie("view_cookie", user_cookie)
 
     return resp
@@ -280,8 +264,7 @@ def subdomain_index(doi):
 def get_unsynchronized_dataset(dataset_id):
 
     # Get dataset
-    dataset = dataset_service.get_unsynchronized_dataset(
-        current_user.id, dataset_id)
+    dataset = dataset_service.get_unsynchronized_dataset(current_user.id, dataset_id)
 
     if not dataset:
         abort(404)
@@ -293,6 +276,7 @@ def get_unsynchronized_dataset(dataset_id):
 def api_datasets_view():
     """Returns an HTML view of all datasets with their information"""
     from app.modules.dataset.models import DataSet
+
     datasets = DataSet.query.all()
     return render_template("dataset/api_datasets.html", datasets=datasets)
 
@@ -303,22 +287,22 @@ def get_dataset_stats(dataset_id):
     dataset = dataset_service.get_or_404(dataset_id)
 
     # Count downloads (unique download records for this dataset)
-    download_records = DSDownloadRecord.query.filter_by(
-        dataset_id=dataset_id).count()
+    download_records = DSDownloadRecord.query.filter_by(dataset_id=dataset_id).count()
 
     # Count views (unique view records for this dataset)
-    view_records = ds_view_record_service.repository.model.query.filter_by(
-        dataset_id=dataset_id).count()
+    view_records = ds_view_record_service.repository.model.query.filter_by(dataset_id=dataset_id).count()
 
-    return jsonify({
-        "dataset_id": dataset.id,
-        "title": dataset.ds_meta_data.title,
-        "download_count": dataset.download_count,
-        "unique_downloads": download_records,
-        "unique_views": view_records,
-        "files_count": dataset.get_files_count(),
-        "total_size_bytes": dataset.get_file_total_size(),
-        "total_size_human": dataset.get_file_total_size_for_human(),
-        "created_at": dataset.created_at.isoformat(),
-        "url": dataset.get_uvlhub_doi(),
-    })
+    return jsonify(
+        {
+            "dataset_id": dataset.id,
+            "title": dataset.ds_meta_data.title,
+            "download_count": dataset.download_count,
+            "unique_downloads": download_records,
+            "unique_views": view_records,
+            "files_count": dataset.get_files_count(),
+            "total_size_bytes": dataset.get_file_total_size(),
+            "total_size_human": dataset.get_file_total_size_for_human(),
+            "created_at": dataset.created_at.isoformat(),
+            "url": dataset.get_uvlhub_doi(),
+        }
+    )

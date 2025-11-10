@@ -55,9 +55,13 @@ class DataSetService(BaseService):
 
         working_dir = os.getenv("WORKING_DIR", "")
         dest_dir = os.path.join(
-            working_dir, "uploads", f"user_{
-                current_user.id}", f"dataset_{
-                dataset.id}")
+            working_dir,
+            "uploads",
+            f"user_{
+                current_user.id}",
+            f"dataset_{
+                dataset.id}",
+        )
 
         os.makedirs(dest_dir, exist_ok=True)
 
@@ -71,12 +75,8 @@ class DataSetService(BaseService):
     def get_unsynchronized(self, current_user_id: int) -> DataSet:
         return self.repository.get_unsynchronized(current_user_id)
 
-    def get_unsynchronized_dataset(
-            self,
-            current_user_id: int,
-            dataset_id: int) -> DataSet:
-        return self.repository.get_unsynchronized_dataset(
-            current_user_id, dataset_id)
+    def get_unsynchronized_dataset(self, current_user_id: int, dataset_id: int) -> DataSet:
+        return self.repository.get_unsynchronized_dataset(current_user_id, dataset_id)
 
     def latest_synchronized(self):
         return self.repository.latest_synchronized()
@@ -109,41 +109,31 @@ class DataSetService(BaseService):
         }
         try:
             logger.info(f"Creating dsmetadata...: {form.get_dsmetadata()}")
-            dsmetadata = self.dsmetadata_repository.create(
-                **form.get_dsmetadata())
+            dsmetadata = self.dsmetadata_repository.create(**form.get_dsmetadata())
             for author_data in [main_author] + form.get_authors():
-                author = self.author_repository.create(
-                    commit=False, ds_meta_data_id=dsmetadata.id, **author_data)
+                author = self.author_repository.create(commit=False, ds_meta_data_id=dsmetadata.id, **author_data)
                 dsmetadata.authors.append(author)
 
-            dataset = self.create(
-                commit=False,
-                user_id=current_user.id,
-                ds_meta_data_id=dsmetadata.id)
+            dataset = self.create(commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id)
 
             for feature_model in form.feature_models:
                 uvl_filename = feature_model.uvl_filename.data
-                fmmetadata = self.fmmetadata_repository.create(
-                    commit=False, **feature_model.get_fmmetadata())
+                fmmetadata = self.fmmetadata_repository.create(commit=False, **feature_model.get_fmmetadata())
                 for author_data in feature_model.get_authors():
-                    author = self.author_repository.create(
-                        commit=False, fm_meta_data_id=fmmetadata.id, **author_data)
+                    author = self.author_repository.create(commit=False, fm_meta_data_id=fmmetadata.id, **author_data)
                     fmmetadata.authors.append(author)
 
                 fm = self.feature_model_repository.create(
-                    commit=False, data_set_id=dataset.id, fm_meta_data_id=fmmetadata.id)
+                    commit=False, data_set_id=dataset.id, fm_meta_data_id=fmmetadata.id
+                )
 
                 # associated files in feature model
-                file_path = os.path.join(
-                    current_user.temp_folder(), uvl_filename)
+                file_path = os.path.join(current_user.temp_folder(), uvl_filename)
                 checksum, size = calculate_checksum_and_size(file_path)
 
                 file = self.hubfilerepository.create(
-                    commit=False,
-                    name=uvl_filename,
-                    checksum=checksum,
-                    size=size,
-                    feature_model_id=fm.id)
+                    commit=False, name=uvl_filename, checksum=checksum, size=size, feature_model_id=fm.id
+                )
                 fm.files.append(file)
             self.repository.session.commit()
         except Exception as exc:
@@ -188,10 +178,7 @@ class DSViewRecordService(BaseService):
     def the_record_exists(self, dataset: DataSet, user_cookie: str):
         return self.repository.the_record_exists(dataset, user_cookie)
 
-    def create_new_record(
-            self,
-            dataset: DataSet,
-            user_cookie: str) -> DSViewRecord:
+    def create_new_record(self, dataset: DataSet, user_cookie: str) -> DSViewRecord:
         return self.repository.create_new_record(dataset, user_cookie)
 
     def create_cookie(self, dataset: DataSet) -> str:
@@ -200,8 +187,7 @@ class DSViewRecordService(BaseService):
         if not user_cookie:
             user_cookie = str(uuid.uuid4())
 
-        existing_record = self.the_record_exists(
-            dataset=dataset, user_cookie=user_cookie)
+        existing_record = self.the_record_exists(dataset=dataset, user_cookie=user_cookie)
 
         if not existing_record:
             self.create_new_record(dataset=dataset, user_cookie=user_cookie)
