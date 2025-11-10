@@ -7,7 +7,7 @@ from app import db
 from app.modules.auth.models import User
 from app.modules.twoauth.models import TwoFactorToken
 from app.modules.twoauth.services import TwoAuthService
-
+from datetime import timedelta, timezone, datetime
 
 
 @pytest.fixture()
@@ -33,11 +33,10 @@ def test_client(test_client):
 def test_verify_form_shown_when_user_pending_2fa(test_client):
     with test_client.session_transaction() as sess:
         user = User.query.filter_by(email="twoauth@example.com").first()
-        sess['2fa_user_id'] = user.id
+        sess["2fa_user_id"] = user.id
     resp = test_client.get("/2auth")
     assert resp.status_code == 200
     assert b"Verificar" in resp.data, "No se ha podidio verificar"
-
 
 
 def test_create_and_send_code_generates_token_and_sends_email(mock_send, test_client):
@@ -74,7 +73,6 @@ def test_verify_code_wrong_code_fails(test_client):
 
 
 def test_can_resend_cooldown(test_client, monkeypatch):
-    from datetime import datetime, timedelta, timezone
 
     with test_client.application.app_context():
         user = User.query.filter_by(email="twoauth@example.com").first()
@@ -93,7 +91,6 @@ def test_can_resend_cooldown(test_client, monkeypatch):
         assert svc.can_resend(user) is True
 
 
-
 def test_signup_code_stored_in_session_and_email_sent(mock_send, test_client):
     svc = TwoAuthService()
     with test_client.application.test_request_context("/"):
@@ -105,7 +102,6 @@ def test_signup_code_stored_in_session_and_email_sent(mock_send, test_client):
 
 
 def test_resend_signup_cooldown(monkeypatch, test_client):
-    from datetime import datetime, timedelta, timezone
 
     svc = TwoAuthService()
 
