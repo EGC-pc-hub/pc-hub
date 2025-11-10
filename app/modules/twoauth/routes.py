@@ -1,15 +1,15 @@
+from datetime import datetime as _dt
+from datetime import timezone as _tz
+
 from flask import redirect, render_template, request, session, url_for
 from flask_login import current_user
 
-from app.modules.twoauth import twoauth_bp
-from app.modules.twoauth.forms import TwoAuthVerifyForm
-from app.modules.twoauth.services import TwoAuthService
 from app.modules.auth.repositories import UserRepository
 from app.modules.auth.services import AuthenticationService
 from app.modules.profile.services import UserProfileService
-
-from datetime import datetime as _dt
-from datetime import timezone as _tz
+from app.modules.twoauth import twoauth_bp
+from app.modules.twoauth.forms import TwoAuthVerifyForm
+from app.modules.twoauth.services import TwoAuthService
 
 service = TwoAuthService()
 user_repo = UserRepository()

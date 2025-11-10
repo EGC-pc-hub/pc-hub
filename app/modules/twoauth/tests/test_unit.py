@@ -1,13 +1,13 @@
-import pytest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
+import pytest
 from flask import session
 
 from app import db
 from app.modules.auth.models import User
 from app.modules.twoauth.models import TwoFactorToken
 from app.modules.twoauth.services import TwoAuthService
-from datetime import timedelta, timezone, datetime
 
 
 @pytest.fixture()
