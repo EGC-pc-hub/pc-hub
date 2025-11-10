@@ -69,7 +69,8 @@ class DataSet(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
     ds_meta_data_id = db.Column(db.Integer, db.ForeignKey("ds_meta_data.id"), nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now())
+    download_count = db.Column(db.Integer, nullable=False, default=0)
 
     ds_meta_data = db.relationship("DSMetaData", backref=db.backref("data_set", uselist=False))
     feature_models = db.relationship("FeatureModel", backref="data_set", lazy=True, cascade="all, delete")
@@ -101,6 +102,9 @@ class DataSet(db.Model):
 
         return SizeService().get_human_readable_size(self.get_file_total_size())
 
+    def get_download_count(self):
+        return self.download_count
+
     def get_uvlhub_doi(self):
         from app.modules.dataset.services import DataSetService
 
@@ -125,6 +129,7 @@ class DataSet(db.Model):
             "files_count": self.get_files_count(),
             "total_size_in_bytes": self.get_file_total_size(),
             "total_size_in_human_format": self.get_file_total_size_for_human(),
+            "download_count": self.download_count,
         }
 
     def __repr__(self):
