@@ -98,8 +98,8 @@ class DataSetService(BaseService):
 
         LÓGICA DE NEGOCIO:
         ------------------
-        "Semana anterior" se define como la semana calendario previa a la semana actual,
-        de lunes 00:00 UTC a lunes 00:00 UTC (exclusive).
+        "Semana anterior" se define como la semana calendario previa a la semana
+        actual, de lunes 00:00 UTC a lunes 00:00 UTC (exclusive).
 
         Ejemplo:
         - Si hoy es miércoles 8 de noviembre de 2025:
