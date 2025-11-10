@@ -10,19 +10,42 @@ class AuthSeeder(BaseSeeder):
     def run(self):
 
         # Seeding users
-        users = [
-            User(email="user1@example.com", password="1234"),
-            User(email="user2@example.com", password="1234"),
+        desired = [
+            ("user1@example.com", "1234"),
+            ("user2@example.com", "1234"),
         ]
 
-        # Inserted users with their assigned IDs are returned by `self.seed`.
-        seeded_users = self.seed(users)
+        # Make seeding idempotent: reuse existing users when present
+        new_users = []
+        existing = {}
+        for email, password in desired:
+            u = User.query.filter_by(email=email).first()
+            if u:
+                existing[email] = u
+            else:
+                new_users.append(User(email=email, password=password))
+
+        created = []
+        if new_users:
+            created = self.seed(new_users)
+
+        # Merge created users into existing map
+        for u in created:
+            existing[u.email] = u
+
+        # Preserve order
+        seeded_users = [existing[email] for email, _ in desired]
 
         # Create profiles for each user inserted.
         user_profiles = []
         names = [("John", "Doe"), ("Jane", "Doe")]
 
         for user, name in zip(seeded_users, names):
+            # Only create a profile if it doesn't already exist
+            existing_profile = UserProfile.query.filter_by(user_id=user.id).first()
+            if existing_profile:
+                continue
+
             profile_data = {
                 "user_id": user.id,
                 "orcid": "",
@@ -33,5 +56,6 @@ class AuthSeeder(BaseSeeder):
             user_profile = UserProfile(**profile_data)
             user_profiles.append(user_profile)
 
-        # Seeding user profiles
-        self.seed(user_profiles)
+        # Seeding user profiles (if any)
+        if user_profiles:
+            self.seed(user_profiles)
