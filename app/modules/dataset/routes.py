@@ -225,12 +225,46 @@ def download_dataset(dataset_id):
     return resp
 
 
-
 @dataset_bp.route("/dataset/api/trending", methods=["GET"])
 def api_trending():
-    """Return trending datasets JSON (used by frontend to refresh the widget).
+    """
+    WI101: API endpoint para obtener trending datasets en formato JSON.
 
-    Uses the same service as the template (last week).
+    PROPÓSITO:
+    ----------
+    Este endpoint permite que el frontend pueda refrescar el widget de trending
+    datasets sin recargar toda la página, habilitando futuras funcionalidades
+    como actualización automática o interactividad AJAX.
+
+    ENDPOINT:
+    ---------
+    GET /dataset/api/trending
+
+    RESPUESTA:
+    ----------
+    JSON array con el mismo formato que trending_datasets_last_week():
+    [
+        {
+            "id": 123,
+            "title": "Mi Dataset",
+            "main_author": "Autor Principal",
+            "downloads": 15,
+            "url": "http://domain/doi/10.1234/dataset"
+        },
+        ...
+    ]
+
+    USO ACTUAL:
+    -----------
+    Principalmente utilizado en tests para verificar la API.
+    El widget actual carga los datos directamente desde el template.
+
+    USO FUTURO:
+    -----------
+    Podría usarse para:
+    - Auto-refresh del widget cada X minutos
+    - Dashboard de estadísticas en tiempo real
+    - Integración con aplicaciones externas
     """
     trending = DataSetService().trending_datasets_last_week(limit=3)
     return jsonify(trending)
