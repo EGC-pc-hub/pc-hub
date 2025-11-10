@@ -3,4 +3,4 @@ from wtforms import SubmitField
 
 
 class CommentForm(FlaskForm):
-    submit = SubmitField('Save comment')
+    submit = SubmitField("Save comment")
