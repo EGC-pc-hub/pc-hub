@@ -1,14 +1,15 @@
-from core.seeders.BaseSeeder import BaseSeeder
 from datetime import datetime
+
 import pytz
 
 from app.modules.comment.models import Comment
+from core.seeders.BaseSeeder import BaseSeeder
 
 
 class CommentSeeder(BaseSeeder):
 
     def run(self):
-       
+
         tz = pytz.timezone("Europe/Madrid")
 
         # Parent/top-level comment
