@@ -133,4 +133,7 @@ def test_upload_dataset():
 
 
 # Call the test function
-test_upload_dataset()
+if __name__ == "__main__":
+    # Allow running the test file directly for manual debugging, but don't execute
+    # when pytest/CI imports the module (prevents side-effects and unused-variable warnings).
+    test_upload_dataset()

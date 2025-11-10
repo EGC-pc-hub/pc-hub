@@ -30,6 +30,7 @@ from app.modules.dataset.services import (
     DSViewRecordService,
 )
 from app.modules.zenodo.services import ZenodoService
+from app.modules.dataset.models import DSDownloadRecord
 
 logger = logging.getLogger(__name__)
 
