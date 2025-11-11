@@ -195,11 +195,6 @@ def test_download_counter_refreshes_on_visibility_change():
             dataset_id = counter_element.get_attribute("data-download-counter")
             initial_count = int(counter_element.text.strip())
 
-            # Download the dataset in a new tab to increment counter
-            download_button = driver.find_element(
-                By.CSS_SELECTOR, f"[data-download-btn][data-dataset-id='{dataset_id}']"
-            )
-
             # Open download in new tab
             original_window = driver.current_window_handle
             driver.execute_script(f"window.open('{host}/dataset/download/{dataset_id}', '_blank');")
@@ -239,17 +234,24 @@ def test_api_html_view_displays_datasets():
         wait_for_page_to_load(driver)
 
         # Verify page loaded by checking URL
-        assert "/dataset/api" in driver.current_url, f"Page should navigate to /dataset/api, got {driver.current_url}"
+        assert (
+            "/dataset/api" in driver.current_url
+        ), f"Page should navigate to /dataset/api, got {
+            driver.current_url}"
 
         # Verify table exists
         try:
             table = driver.find_element(By.CSS_SELECTOR, "table")
             assert table is not None, "Table should be present"
 
-            # Verify download counter column exists (or just verify table has data)
+            # Verify download counter column exists (or just verify table has
+            # data)
             rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
             if rows:
-                print(f"API HTML view test passed! Found {len(rows)} datasets in table.")
+                print(
+                    f"API HTML view test passed! Found {
+                        len(rows)} datasets in table."
+                )
             else:
                 print("API HTML view test passed! Table is present but may be empty.")
 

@@ -56,7 +56,14 @@ class DataSetService(BaseService):
         source_dir = current_user.temp_folder()
 
         working_dir = os.getenv("WORKING_DIR", "")
-        dest_dir = os.path.join(working_dir, "uploads", f"user_{current_user.id}", f"dataset_{dataset.id}")
+        dest_dir = os.path.join(
+            working_dir,
+            "uploads",
+            f"user_{
+                current_user.id}",
+            f"dataset_{
+                dataset.id}",
+        )
 
         os.makedirs(dest_dir, exist_ok=True)
 
@@ -229,7 +236,9 @@ class DataSetService(BaseService):
 
     def create_from_form(self, form, current_user) -> DataSet:
         main_author = {
-            "name": f"{current_user.profile.surname}, {current_user.profile.name}",
+            "name": f"{
+                current_user.profile.surname}, {
+                current_user.profile.name}",
             "affiliation": current_user.profile.affiliation,
             "orcid": current_user.profile.orcid,
         }

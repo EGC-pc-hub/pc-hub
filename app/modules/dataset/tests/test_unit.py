@@ -42,7 +42,7 @@ def sample_dataset(test_client):
         db.session.delete(dataset)
         db.session.delete(ds_meta_data)
         db.session.commit()
-    except:
+    except BaseException:
         db.session.rollback()
 
 
@@ -105,7 +105,8 @@ class TestDownloadCounter:
         response = test_client.get(f"/dataset/download/{sample_dataset.id}")
 
         # Should return the file (200) or redirect
-        assert response.status_code in [200, 302, 500]  # 500 if files don't exist, that's ok for this test
+        # 500 if files don't exist, that's ok for this test
+        assert response.status_code in [200, 302, 500]
 
         # Refresh dataset from DB
         from app import db
@@ -250,7 +251,8 @@ class TestDownloadCounterIntegration:
 
         # Download the dataset
         response = test_client.get(f"/dataset/download/{sample_dataset.id}")
-        assert response.status_code in [200, 302, 500]  # 500 may occur if files don't exist
+        # 500 may occur if files don't exist
+        assert response.status_code in [200, 302, 500]
 
         # Verify counter in database
         from app import db
@@ -273,7 +275,8 @@ class TestDownloadCounterIntegration:
 
         # Download as authenticated user
         response = test_client.get(f"/dataset/download/{sample_dataset.id}")
-        assert response.status_code in [200, 302, 500]  # 500 may occur if files don't exist
+        # 500 may occur if files don't exist
+        assert response.status_code in [200, 302, 500]
 
         # Verify counter incremented
         from app import db

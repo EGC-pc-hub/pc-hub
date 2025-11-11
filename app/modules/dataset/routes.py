@@ -45,6 +45,7 @@ dsmetadata_service = DSMetaDataService()
 zenodo_service = ZenodoService()
 doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
+ds_download_record_service = DSDownloadRecordService()
 
 
 @dataset_bp.route("/dataset/upload", methods=["GET", "POST"])
@@ -85,7 +86,8 @@ def create_dataset():
             dataset_service.update_dsmetadata(dataset.ds_meta_data_id, deposition_id=deposition_id)
 
             try:
-                # iterate for each feature model (one feature model = one request to Zenodo)
+                # iterate for each feature model (one feature model = one
+                # request to Zenodo)
                 for feature_model in dataset.feature_models:
                     zenodo_service.upload_file(dataset, deposition_id, feature_model)
 
@@ -199,7 +201,8 @@ def download_dataset(dataset_id):
 
     user_cookie = request.cookies.get("download_cookie")
     if not user_cookie:
-        user_cookie = str(uuid.uuid4())  # Generate a new unique identifier if it does not exist
+        # Generate a new unique identifier if it does not exist
+        user_cookie = str(uuid.uuid4())
         # Save the cookie to the user's browser
         resp = make_response(
             send_from_directory(
@@ -288,7 +291,8 @@ def subdomain_index(doi):
         # Redirect to the same path with the new DOI
         return redirect(url_for("dataset.subdomain_index", doi=new_doi), code=302)
 
-    # Try to search the dataset by the provided DOI (which should already be the new one)
+    # Try to search the dataset by the provided DOI (which should already be
+    # the new one)
     ds_meta_data = dsmetadata_service.filter_by_doi(doi)
 
     if not ds_meta_data:
@@ -479,7 +483,7 @@ def get_dataset_stats(dataset_id):
     dataset = dataset_service.get_or_404(dataset_id)
 
     # Count downloads (unique download records for this dataset)
-    download_records = DSDownloadRecord.query.filter_by(dataset_id=dataset_id).count()
+    download_records = ds_download_record_service.repository.model.query.filter_by(dataset_id=dataset_id).count()
 
     # Count views (unique view records for this dataset)
     view_records = ds_view_record_service.repository.model.query.filter_by(dataset_id=dataset_id).count()
