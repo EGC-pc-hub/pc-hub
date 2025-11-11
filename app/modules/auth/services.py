@@ -15,6 +15,12 @@ class AuthenticationService(BaseService):
         super().__init__(UserRepository())
         self.user_profile_repository = UserProfileRepository()
 
+    def authenticate(self, email, password) -> User | None:
+        user = self.repository.get_by_email(email)
+        if user is not None and user.check_password(password):
+            return user
+        return None
+
     def login(self, email, password, remember=True):
         user = self.repository.get_by_email(email)
         if user is not None and user.check_password(password):
@@ -56,6 +62,19 @@ class AuthenticationService(BaseService):
             self.repository.session.rollback()
             raise exc
         return user
+
+    def create_user_only(self, *, email: str, password: str) -> User:
+        if not email:
+            raise ValueError("Email is required.")
+        if not password:
+            raise ValueError("Password is required.")
+        try:
+            user = self.create(commit=False, email=email, password=password)
+            self.repository.session.commit()
+            return user
+        except Exception as exc:
+            self.repository.session.rollback()
+            raise exc
 
     def update_profile(self, user_profile_id, form):
         if form.validate():
