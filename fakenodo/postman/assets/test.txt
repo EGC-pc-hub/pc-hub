@@ -1,0 +1,2 @@
+This is a small dummy file for Fakenodo upload tests.
+You can replace it with any file to try different checksums.

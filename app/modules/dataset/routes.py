@@ -21,10 +21,10 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
+from app import db
 from app.modules.comment.services import CommentService
 from app.modules.dataset import dataset_bp
 from app.modules.dataset.forms import DataSetForm
-from app.modules.dataset.models import DSDownloadRecord
 from app.modules.dataset.services import (
     AuthorService,
     DataSetService,
@@ -46,6 +46,7 @@ dsmetadata_service = DSMetaDataService()
 zenodo_service = ZenodoService()
 doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
+ds_download_record_service = DSDownloadRecordService()
 
 comment_service = CommentService()
 
@@ -88,7 +89,8 @@ def create_dataset():
             dataset_service.update_dsmetadata(dataset.ds_meta_data_id, deposition_id=deposition_id)
 
             try:
-                # iterate for each feature model (one feature model = one request to Zenodo)
+                # iterate for each feature model (one feature model = one
+                # request to Zenodo)
                 for feature_model in dataset.feature_models:
                     zenodo_service.upload_file(dataset, deposition_id, feature_model)
 
@@ -202,7 +204,8 @@ def download_dataset(dataset_id):
 
     user_cookie = request.cookies.get("download_cookie")
     if not user_cookie:
-        user_cookie = str(uuid.uuid4())  # Generate a new unique identifier if it does not exist
+        # Generate a new unique identifier if it does not exist
+        user_cookie = str(uuid.uuid4())
         # Save the cookie to the user's browser
         resp = make_response(
             send_from_directory(
@@ -221,23 +224,65 @@ def download_dataset(dataset_id):
             mimetype="application/zip",
         )
 
-    # Check if the download record already exists for this cookie
-    existing_record = DSDownloadRecord.query.filter_by(
+    # Record every download in the database
+    # Always record the download (count each download separately)
+    DSDownloadRecordService().create(
         user_id=current_user.id if current_user.is_authenticated else None,
         dataset_id=dataset_id,
+        download_date=datetime.now(timezone.utc),
         download_cookie=user_cookie,
-    ).first()
+    )
 
-    if not existing_record:
-        # Record the download in your database
-        DSDownloadRecordService().create(
-            user_id=current_user.id if current_user.is_authenticated else None,
-            dataset_id=dataset_id,
-            download_date=datetime.now(timezone.utc),
-            download_cookie=user_cookie,
-        )
+    # Increment the download count for every download
+    dataset.download_count += 1
+    db.session.commit()
 
     return resp
+
+
+@dataset_bp.route("/dataset/api/trending", methods=["GET"])
+def api_trending():
+    """
+    WI101: API endpoint para obtener trending datasets en formato JSON.
+
+    PROPÓSITO:
+    ----------
+    Este endpoint permite que el frontend pueda refrescar el widget de trending
+    datasets sin recargar toda la página, habilitando futuras funcionalidades
+    como actualización automática o interactividad AJAX.
+
+    ENDPOINT:
+    ---------
+    GET /dataset/api/trending
+
+    RESPUESTA:
+    ----------
+    JSON array con el mismo formato que trending_datasets_last_week():
+    [
+        {
+            "id": 123,
+            "title": "Mi Dataset",
+            "main_author": "Autor Principal",
+            "downloads": 15,
+            "url": "http://domain/doi/10.1234/dataset"
+        },
+        ...
+    ]
+
+    USO ACTUAL:
+    -----------
+    Principalmente utilizado en tests para verificar la API.
+    El widget actual carga los datos directamente desde el template.
+
+    USO FUTURO:
+    -----------
+    Podría usarse para:
+    - Auto-refresh del widget cada X minutos
+    - Dashboard de estadísticas en tiempo real
+    - Integración con aplicaciones externas
+    """
+    trending = DataSetService().trending_datasets_last_week(limit=3)
+    return jsonify(trending)
 
 
 @dataset_bp.route("/doi/<path:doi>/", methods=["GET"])
@@ -249,7 +294,8 @@ def subdomain_index(doi):
         # Redirect to the same path with the new DOI
         return redirect(url_for("dataset.subdomain_index", doi=new_doi), code=302)
 
-    # Try to search the dataset by the provided DOI (which should already be the new one)
+    # Try to search the dataset by the provided DOI (which should already be
+    # the new one)
     ds_meta_data = dsmetadata_service.filter_by_doi(doi)
 
     if not ds_meta_data:
@@ -541,3 +587,39 @@ def delete_comment(comment_id):
         return jsonify({"error": str(exc)}), 500
 
     return jsonify({"id": comment_id, "deleted": True}), 200
+
+
+@dataset_bp.route("/dataset/api", methods=["GET"])
+def api_datasets_view():
+    """Returns an HTML view of all datasets with their information"""
+    from app.modules.dataset.models import DataSet
+
+    datasets = DataSet.query.all()
+    return render_template("dataset/api_datasets.html", datasets=datasets)
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/stats", methods=["GET"])
+def get_dataset_stats(dataset_id):
+    """Returns statistics for a dataset including downloads, views, files count, etc."""
+    dataset = dataset_service.get_or_404(dataset_id)
+
+    # Count downloads (unique download records for this dataset)
+    download_records = ds_download_record_service.repository.model.query.filter_by(dataset_id=dataset_id).count()
+
+    # Count views (unique view records for this dataset)
+    view_records = ds_view_record_service.repository.model.query.filter_by(dataset_id=dataset_id).count()
+
+    return jsonify(
+        {
+            "dataset_id": dataset.id,
+            "title": dataset.ds_meta_data.title,
+            "download_count": dataset.download_count,
+            "unique_downloads": download_records,
+            "unique_views": view_records,
+            "files_count": dataset.get_files_count(),
+            "total_size_bytes": dataset.get_file_total_size(),
+            "total_size_human": dataset.get_file_total_size_for_human(),
+            "created_at": dataset.created_at.isoformat(),
+            "url": dataset.get_uvlhub_doi(),
+        }
+    )
