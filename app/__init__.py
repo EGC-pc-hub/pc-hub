@@ -35,7 +35,6 @@ def create_app(config_name="development"):
     # Initialize Mail
     mail.init_app(app)
 
-
     # Register modules
     module_manager = ModuleManager(app)
     module_manager.register_modules()
