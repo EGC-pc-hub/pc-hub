@@ -22,7 +22,6 @@ from flask_login import current_user, login_required
 from app import db
 from app.modules.dataset import dataset_bp
 from app.modules.dataset.forms import DataSetForm
-from app.modules.dataset.models import DSDownloadRecord
 from app.modules.dataset.services import (
     AuthorService,
     DataSetService,
@@ -42,6 +41,7 @@ dsmetadata_service = DSMetaDataService()
 zenodo_service = ZenodoService()
 doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
+ds_download_record_service = DSDownloadRecordService()
 
 
 @dataset_bp.route("/dataset/upload", methods=["GET", "POST"])
@@ -287,7 +287,7 @@ def get_dataset_stats(dataset_id):
     dataset = dataset_service.get_or_404(dataset_id)
 
     # Count downloads (unique download records for this dataset)
-    download_records = DSDownloadRecord.query.filter_by(dataset_id=dataset_id).count()
+    download_records = ds_download_record_service.repository.model.query.filter_by(dataset_id=dataset_id).count()
 
     # Count views (unique view records for this dataset)
     view_records = ds_view_record_service.repository.model.query.filter_by(dataset_id=dataset_id).count()
