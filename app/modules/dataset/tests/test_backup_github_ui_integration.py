@@ -25,6 +25,7 @@ def create_dataset_for_user(user_id, title="DS UI Backup"):
 
 
 def login(client, email, password):
+    client.application.config["ENABLE_2FA"] = False
     return client.post("/login", data={"email": email, "password": password}, follow_redirects=True)
 
 
