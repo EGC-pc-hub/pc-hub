@@ -11,7 +11,6 @@ from core.managers.config_manager import ConfigManager
 from core.managers.error_handler_manager import ErrorHandlerManager
 from core.managers.logging_manager import LoggingManager
 from core.managers.module_manager import ModuleManager
-from flask_session import Session
 
 # Load environment variables
 load_dotenv()
@@ -20,7 +19,6 @@ load_dotenv()
 db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
-session_ext = Session()
 
 
 def create_app(config_name="development"):
@@ -37,8 +35,6 @@ def create_app(config_name="development"):
     # Initialize Mail
     mail.init_app(app)
 
-    # Initialize server-side sessions (avoid storing sensitive data in client cookies)
-    session_ext.init_app(app)
 
     # Register modules
     module_manager = ModuleManager(app)
