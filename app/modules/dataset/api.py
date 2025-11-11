@@ -11,6 +11,7 @@ dataset_fields = {
     "name": "name",
     "doi": "get_uvlhub_doi",
     "files": "files",
+    "download_count": "download_count",
 }
 
 dataset_serializer = Serializer(dataset_fields, related_serializers={"files": file_serializer})

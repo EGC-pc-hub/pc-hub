@@ -84,6 +84,17 @@
 
                         </div>
 
+                        <div class="row mb-2">
+
+                            <div class="col-12">
+                                <p class="p-0 m-0 text-secondary">
+                                    <i data-feather="download" style="display: inline; margin-right: 5px; width: 18px;"></i>
+                                    <small><strong data-download-counter="{{ dataset.id }}">{{ dataset.download_count }}</strong> <span data-download-label>download{{ 's' if dataset.download_count != 1 else '' }}</span></small>
+                                </p>
+                            </div>
+
+                        </div>
+
                         <div class="row  mt-4">
                             <div class="col-12">
                                 <a href="{{ dataset.get_uvlhub_doi() }}" class="btn btn-outline-primary btn-sm"
@@ -92,7 +103,9 @@
                                     View dataset
                                 </a>
 
-                                <a href="/dataset/download/{{ dataset.id }}" class="btn btn-outline-primary btn-sm"
+                                <a href="/dataset/download/{{ dataset.id }}" 
+                                   class="btn btn-outline-primary btn-sm download-trigger" 
+                                   data-download-id="{{ dataset.id }}"
                                    style="border-radius: 5px;">
                                     <i data-feather="download" class="center-button-icon"></i>
                                     Download ({{ dataset.get_file_total_size_for_human() }})
@@ -115,6 +128,45 @@
         <div class="col-xl-4 col-lg-12 col-md-12 col-sm-12">
 
             <div class="row">
+
+                <!-- WI101: Widget de Trending datasets (top 3 descargas semana pasada) -->
+                <!-- IMPLEMENTACIÓN:
+                     - Muestra los 3 datasets más descargados de la semana anterior
+                     - Datos provenientes de la variable trending_datasets (public/routes.py)
+                     - Formato: título (enlace), autor, número de descargas
+                     - Incluye atributo data-dsid para facilitar tests de Selenium
+                -->
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h2> <b>Trending datasets (last week)</b> </h2>
+                            <div class="mb-2" id="trending-container">
+                                {% if trending_datasets and trending_datasets|length > 0 %}
+                                    <!-- Lista de trending datasets -->
+                                    <ul class="list-unstyled" id="trending-list">
+                                        {% for ds in trending_datasets %}
+                                            <li class="mb-3" data-dsid="{{ ds.id }}">
+                                                <!-- Título del dataset como enlace -->
+                                                <a href="{{ ds.url }}">{{ ds.title }}</a>
+                                                <!-- Información adicional: autor y número de descargas -->
+                                                <div class="text-small text-secondary">
+                                                    {% if ds.main_author %}
+                                                        {{ ds.main_author }} &nbsp;|
+                                                    {% endif %}
+                                                    <!-- Clase trending-downloads para facilitar tests -->
+                                                    <span class="trending-downloads">{{ ds.downloads }}</span> downloads
+                                                </div>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <!-- Mensaje cuando no hay datos de trending -->
+                                    <p class="text-secondary" id="trending-empty">No trending datasets for last week.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="col-12">
 
@@ -283,4 +335,96 @@
 
 {% block scripts %}
     <script src="{{ url_for('public.scripts') }}"></script>
+    <script>
+        // Download and refresh trending widget
+        function downloadAndRefresh(evt, datasetId) {
+            // allow opening download in a new tab to preserve current page
+            evt.preventDefault();
+            const downloadUrl = '/dataset/download/' + datasetId;
+            // open in new tab to trigger browser download
+            window.open(downloadUrl, '_blank');
+
+            // Wait a short time for server to record the download, then refresh trending
+            setTimeout(fetchAndRenderTrending, 800);
+        }
+
+        function fetchAndRenderTrending() {
+            fetch('/dataset/api/trending')
+                .then(function (resp) { return resp.json(); })
+                .then(function (data) {
+                    const container = document.getElementById('trending-container');
+                    if (!container) return;
+
+                    const list = document.getElementById('trending-list');
+                    const empty = document.getElementById('trending-empty');
+
+                    if (!data || data.length === 0) {
+                        if (list) list.remove();
+                        if (!empty) {
+                            const p = document.createElement('p');
+                            p.id = 'trending-empty';
+                            p.className = 'text-secondary';
+                            p.textContent = 'No trending datasets for last week.';
+                            container.appendChild(p);
+                        }
+                        return;
+                    }
+
+                    if (empty) empty.remove();
+
+                    let ul = list;
+                    if (!ul) {
+                        ul = document.createElement('ul');
+                        ul.id = 'trending-list';
+                        ul.className = 'list-unstyled';
+                        container.appendChild(ul);
+                    }
+
+                    // Clear and re-populate
+                    ul.innerHTML = '';
+                    data.forEach(function (ds) {
+                        const li = document.createElement('li');
+                        li.className = 'mb-3';
+                        li.setAttribute('data-dsid', ds.id);
+
+                        const a = document.createElement('a');
+                        a.href = ds.url;
+                        a.textContent = ds.title;
+
+                        const meta = document.createElement('div');
+                        meta.className = 'text-small text-secondary';
+                        const authorSpan = document.createElement('span');
+                        if (ds.main_author) {
+                            authorSpan.textContent = ds.main_author + ' | ';
+                        }
+                        const downloadsSpan = document.createElement('span');
+                        downloadsSpan.className = 'trending-downloads';
+                        downloadsSpan.textContent = ds.downloads + ' downloads';
+
+                        meta.appendChild(authorSpan);
+                        meta.appendChild(downloadsSpan);
+
+                        li.appendChild(a);
+                        li.appendChild(meta);
+                        ul.appendChild(li);
+                    });
+                })
+                .catch(function (err) {
+                    console.error('Error fetching trending datasets:', err);
+                });
+        }
+
+        // Attach handlers to download links on DOM ready
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.download-trigger').forEach(function (el) {
+                el.addEventListener('click', function (evt) {
+                    const id = el.getAttribute('data-download-id');
+                    downloadAndRefresh(evt, id);
+                });
+            });
+        });
+
+        // Optionally poll periodically to keep widget fresh (every 30s)
+        setInterval(fetchAndRenderTrending, 30000);
+    </script>
 {% endblock %}

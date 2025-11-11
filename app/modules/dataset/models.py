@@ -47,7 +47,9 @@ class DSMetrics(db.Model):
     number_of_features = db.Column(db.String(120))
 
     def __repr__(self):
-        return f"DSMetrics<models={self.number_of_models}, features={self.number_of_features}>"
+        return f"DSMetrics<models={
+            self.number_of_models}, features={
+            self.number_of_features}>"
 
 
 class DSMetaData(db.Model):
@@ -69,7 +71,8 @@ class DataSet(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
     ds_meta_data_id = db.Column(db.Integer, db.ForeignKey("ds_meta_data.id"), nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now())
+    download_count = db.Column(db.Integer, nullable=False, default=0)
 
     ds_meta_data = db.relationship("DSMetaData", backref=db.backref("data_set", uselist=False))
     feature_models = db.relationship("FeatureModel", backref="data_set", lazy=True, cascade="all, delete")
@@ -88,7 +91,12 @@ class DataSet(db.Model):
         return self.ds_meta_data.publication_type.name.replace("_", " ").title()
 
     def get_zenodo_url(self):
-        return f"https://zenodo.org/record/{self.ds_meta_data.deposition_id}" if self.ds_meta_data.dataset_doi else None
+        return (
+            f"https://zenodo.org/record/{
+                self.ds_meta_data.deposition_id}"
+            if self.ds_meta_data.dataset_doi
+            else None
+        )
 
     def get_files_count(self):
         return sum(len(fm.files) for fm in self.feature_models)
@@ -100,6 +108,9 @@ class DataSet(db.Model):
         from app.modules.dataset.services import SizeService
 
         return SizeService().get_human_readable_size(self.get_file_total_size())
+
+    def get_download_count(self):
+        return self.download_count
 
     def get_uvlhub_doi(self):
         from app.modules.dataset.services import DataSetService
@@ -125,6 +136,7 @@ class DataSet(db.Model):
             "files_count": self.get_files_count(),
             "total_size_in_bytes": self.get_file_total_size(),
             "total_size_in_human_format": self.get_file_total_size_for_human(),
+            "download_count": self.download_count,
         }
 
     def __repr__(self):
@@ -155,7 +167,11 @@ class DSViewRecord(db.Model):
     view_cookie = db.Column(db.String(36), nullable=False)  # Assuming UUID4 strings
 
     def __repr__(self):
-        return f"<View id={self.id} dataset_id={self.dataset_id} date={self.view_date} cookie={self.view_cookie}>"
+        return f"<View id={
+            self.id} dataset_id={
+            self.dataset_id} date={
+            self.view_date} cookie={
+                self.view_cookie}>"
 
 
 class DOIMapping(db.Model):

@@ -1,0 +1,24 @@
+name: Deploy to Render pre-production
+
+on:
+    push:
+      branches:
+        - trunk
+    pull_request:
+      branches:
+        - trunk
+
+jobs:
+
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Deploy to Render
+        env:
+          deploy_url: ${{ secrets.RENDER_PRE_PRODUCTION_DEPLOY_HOOK_URL }}
+        run: |
+          curl "$deploy_url"

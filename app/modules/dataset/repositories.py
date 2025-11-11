@@ -24,6 +24,33 @@ class DSDownloadRecordRepository(BaseRepository):
         max_id = self.model.query.with_entities(func.max(self.model.id)).scalar()
         return max_id if max_id is not None else 0
 
+    def top_downloaded_in_period(self, since: datetime, limit: int = 3, until: datetime = None):
+        """
+        WI101: Retorna los datasets más descargados en un período específico.
+
+        Esta función es la base del cálculo de trending datasets. Consulta la tabla
+        DSDownloadRecord para contar las descargas de cada dataset en un rango de fechas.
+
+        Args:
+            since: Fecha de inicio del período (inclusive)
+            limit: Número máximo de datasets a retornar (por defecto 3 para el widget)
+            until: Fecha de fin del período (exclusive, opcional)
+
+        Returns:
+            Lista de tuplas (dataset_id, downloads_count) ordenadas por descargas descendente
+
+        Ejemplo de uso:
+            # Para obtener trending de la semana pasada:
+            top_downloaded_in_period(last_week_start, 3, this_week_start)
+        """
+        query = self.model.query.with_entities(self.model.dataset_id, func.count(self.model.id).label("cnt"))
+        if until:
+            query = query.filter(self.model.download_date >= since, self.model.download_date < until)
+        else:
+            query = query.filter(self.model.download_date >= since)
+
+        return query.group_by(self.model.dataset_id).order_by(desc("cnt")).limit(limit).all()
+
 
 class DSMetaDataRepository(BaseRepository):
     def __init__(self):

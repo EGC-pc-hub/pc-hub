@@ -1,0 +1,318 @@
+{
+  "info": {
+    "name": "Fakenodo",
+    "_postman_id": "c7a2f4a4-6f25-4ef2-bc2e-6f6a6b2f5e11",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create deposition",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 201', function () { pm.response.to.have.status(201); });",
+              "let json = pm.response.json();",
+              "pm.expect(json).to.have.property('id');",
+              "pm.expect(json).to.have.property('conceptrecid');",
+              "pm.environment.set('deposition_id', json.id);",
+              "pm.environment.set('conceptrecid', json.conceptrecid);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"metadata\": {\"title\": \"My dataset\", \"upload_type\": \"dataset\", \"description\": \"desc\", \"creators\": [{\"name\": \"Alice\"}]}}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/deposit/depositions",
+          "host": ["{{baseUrl}}"],
+          "path": ["deposit", "depositions"]
+        }
+      }
+    },
+    {
+      "name": "Publish (first) → DOI v1",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "if (!pm.environment.get('deposition_id')) {",
+              "  const base = pm.environment.get('baseUrl');",
+              "  const meta = {metadata: {title: 'Auto dataset', upload_type: 'dataset', description: 'auto', creators: [{name: 'Auto'}]}};",
+              "  pm.sendRequest({url: base + '/deposit/depositions', method: 'POST', header: {'Content-Type': 'application/json'}, body: {mode: 'raw', raw: JSON.stringify(meta)}}, function (err, res) {",
+              "    if (!err && res.code === 201) { const js = res.json(); pm.environment.set('deposition_id', js.id); pm.environment.set('conceptrecid', js.conceptrecid); }",
+              "  });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 202', function () { pm.response.to.have.status(202); });",
+              "let json = pm.response.json();",
+              "pm.expect(json).to.have.property('doi');",
+              "pm.test('doi includes v1', function(){ pm.expect(json.doi).to.include('.v1'); });",
+              "pm.environment.set('doi_v1', json.doi);",
+              "pm.environment.set('doi_latest', json.doi);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/deposit/depositions/{{deposition_id}}/actions/publish",
+          "host": ["{{baseUrl}}"],
+          "path": ["deposit", "depositions", "{{deposition_id}}", "actions", "publish"]
+        }
+      }
+    },
+    {
+      "name": "Update metadata (no file change)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"metadata\": {\"title\": \"My dataset updated\", \"upload_type\": \"dataset\"}}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/deposit/depositions/{{deposition_id}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["deposit", "depositions", "{{deposition_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Publish again (metadata-only) → same DOI",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 202', function () { pm.response.to.have.status(202); });",
+              "let json = pm.response.json();",
+              "pm.test('same DOI as v1', function(){ pm.expect(json.doi).to.eql(pm.environment.get('doi_v1')); });",
+              "pm.environment.set('doi_latest', json.doi);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/deposit/depositions/{{deposition_id}}/actions/publish",
+          "host": ["{{baseUrl}}"],
+          "path": ["deposit", "depositions", "{{deposition_id}}", "actions", "publish"]
+        }
+      }
+    },
+    {
+      "name": "Upload file (form-data)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "let testFile = pm.environment.get('testFilePath');",
+              "if (!testFile || testFile.startsWith('./')) {",
+              "  testFile = './fakenodo/postman/assets/test.txt';",
+              "  pm.environment.set('testFilePath', testFile);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('testFilePath is set', function(){ pm.expect(pm.environment.get('testFilePath')).to.be.a('string').and.not.empty; });",
+              "pm.test('status 201', function () { pm.response.to.have.status(201); });",
+              "let json = pm.response.json();",
+              "pm.expect(json).to.have.property('filename');",
+              "pm.expect(json).to.have.property('checksum');",
+              "pm.environment.set('file_uploaded', true);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "name", "value": "test.txt", "type": "text" },
+            { "key": "file", "type": "file", "src": ["{{testFilePath}}"] },
+            { "key": "filepath", "value": "{{testFilePath}}", "type": "text" }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/deposit/depositions/{{deposition_id}}/files",
+          "host": ["{{baseUrl}}"],
+          "path": ["deposit", "depositions", "{{deposition_id}}", "files"]
+        }
+      }
+    },
+    {
+      "name": "Publish after file change → new DOI v2",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 202', function () { pm.response.to.have.status(202); });",
+              "let json = pm.response.json();",
+              "pm.test('new DOI different from v1', function(){ pm.expect(json.doi).to.not.eql(pm.environment.get('doi_v1')); });",
+              "pm.test('doi includes v2', function(){ pm.expect(json.doi).to.include('.v2'); });",
+              "pm.environment.set('doi_latest', json.doi);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/deposit/depositions/{{deposition_id}}/actions/publish",
+          "host": ["{{baseUrl}}"],
+          "path": ["deposit", "depositions", "{{deposition_id}}", "actions", "publish"]
+        }
+      }
+    },
+    {
+      "name": "List versions",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "let json = pm.response.json();",
+              "pm.expect(json).to.have.property('hits');",
+              "pm.expect(json.hits).to.have.property('hits');",
+              "pm.test('has at least 2 versions', function(){ pm.expect(json.hits.total).to.be.at.least(2); });",
+              "const dois = json.hits.hits.map(h => h.doi);",
+              "pm.test('contains v1', function(){ pm.expect(dois).to.include(pm.environment.get('doi_v1')); });",
+              "pm.test('contains latest', function(){ pm.expect(dois).to.include(pm.environment.get('doi_latest')); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/records/{{conceptrecid}}/versions",
+          "host": ["{{baseUrl}}"],
+          "path": ["records", "{{conceptrecid}}", "versions"]
+        }
+      }
+    },
+    {
+      "name": "Get deposition",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "let json = pm.response.json();",
+              "pm.expect(json).to.have.property('id', pm.environment.get('deposition_id'));",
+              "pm.expect(json).to.have.property('state');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/deposit/depositions/{{deposition_id}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["deposit", "depositions", "{{deposition_id}}"]
+        }
+      }
+    },
+    {
+      "name": "List depositions",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "let json = pm.response.json();",
+              "pm.expect(json).to.be.an('array');",
+              "pm.test('contains at least 1 deposition', function(){ pm.expect(json.length).to.be.at.least(1); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/deposit/depositions",
+          "host": ["{{baseUrl}}"],
+          "path": ["deposit", "depositions"]
+        }
+      }
+    },
+    {
+      "name": "Delete deposition",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 204', function () { pm.response.to.have.status(204); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "url": {
+          "raw": "{{baseUrl}}/deposit/depositions/{{deposition_id}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["deposit", "depositions", "{{deposition_id}}"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5005/api" }
+  ]
+}
