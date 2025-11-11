@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from flask import Flask
 from flask_mail import Mail
 from flask_migrate import Migrate
+from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
 
 from core.configuration.configuration import get_app_version
@@ -11,7 +12,7 @@ from core.managers.config_manager import ConfigManager
 from core.managers.error_handler_manager import ErrorHandlerManager
 from core.managers.logging_manager import LoggingManager
 from core.managers.module_manager import ModuleManager
-from flask_session import Session
+
 
 # Load environment variables
 load_dotenv()
