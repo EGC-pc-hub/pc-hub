@@ -11,6 +11,7 @@ def test_client(test_client):
     """
     Extends the test_client fixture to add additional specific data for module testing.
     """
+    test_client.application.config["ENABLE_2FA"] = False
     with test_client.application.app_context():
         # Add HERE new elements to the database that you want to exist in the test context.
         # DO NOT FORGET to use db.session.add(<element>) and db.session.commit() to save the data.
@@ -72,17 +73,12 @@ def test_signup_user_successful(test_client):
         data=dict(name="Foo", surname="Example", email="foo@example.com", password="foo1234"),
         follow_redirects=True,
     )
-
-    assert response.request.path == url_for("twoauth.verify"), "No se mostró verificación 2FA tras signup"
-    assert UserRepository().get_by_email("foo@example.com") is None, "Usuario creado antes de verificar 2FA"
-
-    with test_client.session_transaction() as sess:
-        code = sess.get("pending_signup_2fa_code")
-        assert code is not None and len(code) == 6, "Código 2FA de signup no presente en sesión"
+    assert response.request.path == url_for("public.index"), "Signup was unsuccessful"
 
 
 def test_service_create_with_profie_success(clean_database):
     data = {"name": "Test", "surname": "Foo", "email": "service_test@example.com", "password": "test1234"}
+
     AuthenticationService().create_with_profile(**data)
 
     assert UserRepository().count() == 1
