@@ -50,6 +50,7 @@ ds_download_record_service = DSDownloadRecordService()
 
 comment_service = CommentService()
 
+
 @dataset_bp.route("/dataset/upload", methods=["GET", "POST"])
 @login_required
 def create_dataset():
@@ -313,7 +314,9 @@ def subdomain_index(doi):
 
     # Save the cookie to the user's browser
     user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
-    resp = make_response(render_template("dataset/view_dataset.html", dataset=dataset, comments=comments, is_owner=is_owner))
+    resp = make_response(
+        render_template("dataset/view_dataset.html", dataset=dataset, comments=comments, is_owner=is_owner)
+    )
     resp.set_cookie("view_cookie", user_cookie)
 
     return resp
@@ -516,6 +519,7 @@ def get_dataset_stats(dataset_id):
             "url": dataset.get_uvlhub_doi(),
         }
     )
+
 
 @dataset_bp.route("/dataset/<int:dataset_id>/comment", methods=["POST"])
 @login_required
