@@ -22,6 +22,7 @@ from flask import (
 from flask_login import current_user, login_required
 
 from app import db
+from app.modules.comment.services import CommentService
 from app.modules.dataset import dataset_bp
 from app.modules.dataset.forms import DataSetForm
 from app.modules.dataset.services import (
@@ -47,6 +48,7 @@ doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
 ds_download_record_service = DSDownloadRecordService()
 
+comment_service = CommentService()
 
 @dataset_bp.route("/dataset/upload", methods=["GET", "POST"])
 @login_required
@@ -301,9 +303,17 @@ def subdomain_index(doi):
     # Get dataset
     dataset = ds_meta_data.data_set
 
+    # Determine ownership for filtering comments
+    is_owner = current_user.is_authenticated and (current_user.id == dataset.user_id)
+
+    # Prepare comments to show: only top-level and visible, unless owner
+    comments = [
+        c for c in dataset.comments if getattr(c, "parent", None) is None and (getattr(c, "visible", True) or is_owner)
+    ]
+
     # Save the cookie to the user's browser
     user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
-    resp = make_response(render_template("dataset/view_dataset.html", dataset=dataset))
+    resp = make_response(render_template("dataset/view_dataset.html", dataset=dataset, comments=comments, is_owner=is_owner))
     resp.set_cookie("view_cookie", user_cookie)
 
     return resp
@@ -319,7 +329,11 @@ def get_unsynchronized_dataset(dataset_id):
     if not dataset:
         abort(404)
 
-    return render_template("dataset/view_dataset.html", dataset=dataset)
+    is_owner = current_user.is_authenticated and (current_user.id == dataset.user_id)
+    comments = [
+        c for c in dataset.comments if getattr(c, "parent", None) is None and (getattr(c, "visible", True) or is_owner)
+    ]
+    return render_template("dataset/view_dataset.html", dataset=dataset, comments=comments, is_owner=is_owner)
 
 
 @dataset_bp.route("/dataset/<int:dataset_id>/backup/authorised-user", methods=["GET"])
@@ -502,3 +516,107 @@ def get_dataset_stats(dataset_id):
             "url": dataset.get_uvlhub_doi(),
         }
     )
+
+@dataset_bp.route("/dataset/<int:dataset_id>/comment", methods=["POST"])
+@login_required
+def post_comment(dataset_id):
+    # create a new comment for a dataset
+    dataset = dataset_service.get_or_404(dataset_id)
+
+    data = request.form if request.form else request.get_json() or {}
+    content = data.get("content")
+    parent_id = data.get("parent_id")
+
+    if not content or not content.strip():
+        return jsonify({"error": "Empty content"}), 400
+
+    try:
+
+        comment = comment_service.create(
+            dataset_id=dataset.id,
+            user_id=current_user.id if current_user.is_authenticated else None,
+            content=content.strip(),
+            parent_id=parent_id,
+        )
+    except Exception as exc:
+        logger.exception(f"Error creating comment: {exc}")
+        return jsonify({"error": str(exc)}), 500
+
+    # Compute author name robustly (model doesn't have `author_name` attribute)
+    author_name = None
+    try:
+        # prefer explicit attribute if present
+        author_name = getattr(comment, "author_name", None)
+        if not author_name and getattr(comment, "user", None):
+            profile = getattr(comment.user, "profile", None)
+            if profile and getattr(profile, "surname", None) and getattr(profile, "name", None):
+                author_name = f"{profile.surname}, {profile.name}"
+            else:
+                # fallback to email or stringified user id
+                author_name = getattr(comment.user, "email", None) or f"user_{comment.user.id}"
+    except Exception:
+        author_name = "Anonymous"
+
+    return (
+        jsonify(
+            {
+                "id": comment.id,
+                "author_name": author_name,
+                "content": comment.content,
+                "created_at": comment.created_at.isoformat() if getattr(comment, "created_at", None) else None,
+                "parent_id": comment.parent_id,
+            }
+        ),
+        200,
+    )
+
+
+@dataset_bp.route("/dataset/comment/<int:comment_id>/hide", methods=["POST"])
+@login_required
+def hide_comment(comment_id):
+    # only dataset owner can hide/unhide comments
+    # use central comment service to get the comment
+    comment = comment_service.get_by_id(comment_id)
+    if not comment:
+        abort(404)
+
+    dataset = dataset_service.get_or_404(comment.dataset_id)
+    if dataset.user_id != current_user.id:
+        abort(403)
+
+    # toggle visibility
+    new_visibility = not comment.visible
+    try:
+        comment_service.update(comment_id, visible=new_visibility)
+        # propagate visibility change to all descendant replies
+        try:
+            comment_service.update_children_visibility(comment_id, new_visibility)
+        except Exception:
+            # don't fail the whole request if propagation has an issue; log and continue
+            logger.exception(f"Error propagating visibility to children of comment {comment_id}")
+    except Exception as exc:
+        logger.exception(f"Error toggling comment visibility: {exc}")
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify({"id": comment_id, "visible": new_visibility}), 200
+
+
+@dataset_bp.route("/dataset/comment/<int:comment_id>/delete", methods=["POST"])
+@login_required
+def delete_comment(comment_id):
+    # use central comment service to get the comment
+    comment = comment_service.get_by_id(comment_id)
+    if not comment:
+        abort(404)
+
+    dataset = dataset_service.get_or_404(comment.dataset_id)
+    if dataset.user_id != current_user.id:
+        abort(403)
+
+    try:
+        comment_service.delete(comment_id)
+    except Exception as exc:
+        logger.exception(f"Error deleting comment: {exc}")
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify({"id": comment_id, "deleted": True}), 200
