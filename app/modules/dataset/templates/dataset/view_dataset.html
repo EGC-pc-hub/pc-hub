@@ -380,6 +380,69 @@
             </div>
         </div>
         {% endif %}
+        <!-- Comments card (placed above UVL models) -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Comments</h5>
+
+                {% if current_user.is_authenticated %}
+                    <div class="mb-2">
+                    <textarea id="new-comment-content" class="form-control" rows="3" placeholder="Write comment..."></textarea>
+                    <div class="d-grid gap-2 mt-2">
+                        <button id="post-comment-btn" class="btn btn-primary btn-sm" data-dataset-id="{{ dataset.id }}">Post</button>
+                    </div>
+                </div>
+                {% else %}
+                <p><a href="{{ url_for('auth.login') }}">Log in</a> to post comments.</p>
+                {% endif %}
+
+                <div id="comments-list" style="max-height: 320px; overflow-y: auto;">
+                    {# Comments are prepared server-side and contain only top-level + visible (or all for owner) #}
+                    {% for comment in comments %}
+                        <div class="card mb-2">
+                            <div class="card-body p-2">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>{{ comment.author_name if comment.author_name else (comment.user.profile.surname ~ ', ' ~ comment.user.profile.name) if comment.user and comment.user.profile else 'Anonymous' }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ comment.created_at.strftime('%b %d, %Y %I:%M %p') if comment.created_at }}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        {% if not comment.visible %}
+                                        <span class="badge bg-warning text-dark">Hidden</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <p class="mb-1 mt-2">{{ comment.content }}</p>
+
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <a href="{{ url_for('comment.index_by_parent', parent_id=comment.id) }}" class="btn btn-outline-secondary btn-sm">Replies</a>
+                                    </div>
+                                    <div>
+                                        {% if current_user.is_authenticated and dataset.user_id == current_user.id %}
+                                            <button class="btn btn-secondary btn-sm toggle-hide-btn" data-comment-id="{{ comment.id }}">{% if comment.visible %}Hide{% else %}Unhide{% endif %}</button>
+                                            <button class="btn btn-danger btn-sm delete-comment-btn" data-comment-id="{{ comment.id }}">Delete</button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Reply box (hidden by default) -->
+                                <div id="reply-box-{{ comment.id }}" style="display: none; margin-top: 8px;">
+                                    <textarea id="reply-content-{{ comment.id }}" class="form-control" rows="2" placeholder="Write a reply..."></textarea>
+                                    <div class="d-grid gap-2 mt-2">
+                                        <button class="btn btn-primary btn-sm reply-post-btn" data-dataset-id="{{ dataset.id }}" data-comment-id="{{ comment.id }}">Reply</button>
+                                        <button class="btn btn-light btn-sm reply-cancel-btn" data-comment-id="{{ comment.id }}">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No comments yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
 
         
     </div>
@@ -698,5 +761,134 @@
             });
     }
 </script>
+<script>
+    // Comment actions: post comment, reply, show/hide reply box, toggle hide, delete
+    function postComment(datasetId) {
+        const textarea = document.getElementById('new-comment-content');
+        if (!textarea) return;
+        const content = textarea.value || '';
+        if (!content.trim()) {
+            alert('Empty comment');
+            return;
+        }
 
+        fetch(`/dataset/${datasetId}/comment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: content.trim() })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    // simple approach: reload to show new comment
+                    window.location.reload();
+                }
+            })
+            .catch(err => console.error('Error posting comment:', err));
+    }
+
+    function postReply(datasetId, parentId) {
+        const textarea = document.getElementById(`reply-content-${parentId}`);
+        if (!textarea) return;
+        const content = textarea.value || '';
+        if (!content.trim()) {
+            alert('Empty reply');
+            return;
+        }
+
+        fetch(`/dataset/${datasetId}/comment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: content.trim(), parent_id: parentId })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    window.location.reload();
+                }
+            })
+            .catch(err => console.error('Error posting reply:', err));
+    }
+
+    function showReplyBox(id) {
+        const box = document.getElementById(`reply-box-${id}`);
+        if (box) box.style.display = 'block';
+    }
+
+    function hideReplyBox(id) {
+        const box = document.getElementById(`reply-box-${id}`);
+        if (box) box.style.display = 'none';
+    }
+
+    function toggleHide(commentId) {
+        fetch(`/dataset/comment/${commentId}/hide`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) alert(data.error);
+                else window.location.reload();
+            })
+            .catch(err => console.error('Error toggling hide:', err));
+    }
+
+    function deleteComment(commentId) {
+        if (!confirm('Delete this comment?')) return;
+        fetch(`/dataset/comment/${commentId}/delete`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) alert(data.error);
+                else window.location.reload();
+            })
+            .catch(err => console.error('Error deleting comment:', err));
+    }
+
+    // Wire UI buttons (avoid inline onclick with Jinja to satisfy linters)
+    document.addEventListener('DOMContentLoaded', function () {
+        // Post comment button
+        const postBtn = document.getElementById('post-comment-btn');
+        if (postBtn) {
+            postBtn.addEventListener('click', function (e) {
+                const ds = this.dataset.datasetId;
+                postComment(ds);
+            });
+        }
+
+        // Delegated handlers for comment list buttons
+        const commentsList = document.getElementById('comments-list');
+        if (commentsList) {
+            commentsList.addEventListener('click', function (e) {
+                const target = e.target;
+                if (target.classList.contains('reply-toggle')) {
+                    const id = target.dataset.commentId;
+                    showReplyBox(id);
+                    return;
+                }
+                if (target.classList.contains('reply-post-btn')) {
+                    const ds = target.dataset.datasetId;
+                    const parent = target.dataset.commentId;
+                    postReply(ds, parent);
+                    return;
+                }
+                if (target.classList.contains('reply-cancel-btn')) {
+                    const id = target.dataset.commentId;
+                    hideReplyBox(id);
+                    return;
+                }
+                if (target.classList.contains('toggle-hide-btn')) {
+                    const id = target.dataset.commentId;
+                    toggleHide(id);
+                    return;
+                }
+                if (target.classList.contains('delete-comment-btn')) {
+                    const id = target.dataset.commentId;
+                    deleteComment(id);
+                    return;
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}
