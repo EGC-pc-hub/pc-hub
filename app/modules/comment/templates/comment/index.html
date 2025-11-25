@@ -4,8 +4,134 @@
 
 {% block content %}
 
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h3>Replies for comment</h3>
+
+            <div class="card mb-3">
+                <div class="card-body p-2">
+                    <div>
+                        <strong>{{ parent.author_name if parent.author_name else (parent.user.profile.surname ~ ', ' ~ parent.user.profile.name) if parent.user and parent.user.profile else 'Anonymous' }}</strong>
+                        <br>
+                        <small class="text-muted">{{ parent.created_at.strftime('%b %d, %Y %I:%M %p') if parent.created_at }}</small>
+                    </div>
+                    <p class="mt-2">{{ parent.content }}</p>
+                </div>
+            </div>
+
+            {% if current_user.is_authenticated %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Write a reply</h5>
+                    <textarea id="new-reply-content" class="form-control" rows="3" placeholder="Write reply..."></textarea>
+                    <div class="d-grid gap-2 mt-2">
+                        <button id="post-reply-btn" class="btn btn-primary btn-sm" data-parent-id="{{ parent.id }}">Post reply</button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+                <p><a href="{{ url_for('auth.login') }}">Log in</a> to post a reply.</p>
+            {% endif %}
+
+            <h5>Replies</h5>
+            <div id="replies-list">
+                {% for comment in replies %}
+                <div class="card mb-2">
+                    <div class="card-body p-2">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>{{ comment.author_name if comment.author_name else (comment.user.profile.surname ~ ', ' ~ comment.user.profile.name) if comment.user and comment.user.profile else 'Anonymous' }}</strong>
+                                <br>
+                                <small class="text-muted">{{ comment.created_at.strftime('%b %d, %Y %I:%M %p') if comment.created_at }}</small>
+                            </div>
+                            <div class="text-end">
+                                {% if not comment.visible %}
+                                <span class="badge bg-warning text-dark">Hidden</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <p class="mb-1 mt-2">{{ comment.content }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <a href="{{ url_for('comment.index_by_parent', parent_id=comment.id) }}" class="btn btn-outline-secondary btn-sm">Replies</a>
+                            </div>
+                            <div>
+                                {% if current_user.is_authenticated and dataset.user_id == current_user.id %}
+                                    <button class="btn btn-secondary btn-sm toggle-hide-btn" data-comment-id="{{ comment.id }}">{% if comment.visible %}Hide{% else %}Unhide{% endif %}</button>
+                                    <button class="btn btn-danger btn-sm delete-comment-btn" data-comment-id="{{ comment.id }}">Delete</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                    <p class="text-muted">No replies yet.</p>
+                {% endfor %}
+            </div>
+
+            <div class="mt-3">
+                {% if parent.parent %}
+                    <a href="{{ url_for('comment.index_by_parent', parent_id=parent.parent.id) }}" class="btn btn-secondary">Back to parent comment</a>
+                {% else %}
+                    {% if dataset and dataset.get_uvlhub_doi() %}
+                        <a href="{{ dataset.get_uvlhub_doi() }}" class="btn btn-secondary">Back to dataset</a>
+                    {% else %}
+                        <a href="/" class="btn btn-secondary">Back</a>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
-    <script src="{{ url_for('comment.scripts') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const postBtn = document.getElementById('post-reply-btn');
+    if (postBtn) {
+        postBtn.addEventListener('click', function () {
+            const parentId = this.dataset.parentId;
+            const textarea = document.getElementById('new-reply-content');
+            const content = (textarea && textarea.value) || '';
+            if (!content.trim()) return alert('Empty reply');
+
+            fetch(`/comment/parent/${parentId}/reply`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: content.trim() })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) alert(data.error);
+                else location.reload();
+            })
+            .catch(err => console.error(err));
+        });
+    }
+
+    // delegated handlers for hide/delete
+    const repliesList = document.getElementById('replies-list');
+    if (repliesList) {
+        repliesList.addEventListener('click', function (e) {
+            const t = e.target;
+            if (t.classList.contains('toggle-hide-btn')) {
+                const id = t.dataset.commentId;
+                fetch(`/dataset/comment/${id}/hide`, { method: 'POST' })
+                    .then(r => r.json()).then(d => { if (d.error) alert(d.error); else location.reload(); });
+                return;
+            }
+            if (t.classList.contains('delete-comment-btn')) {
+                const id = t.dataset.commentId;
+                if (!confirm('Delete this reply?')) return;
+                fetch(`/dataset/comment/${id}/delete`, { method: 'POST' })
+                    .then(r => r.json()).then(d => { if (d.error) alert(d.error); else location.reload(); });
+            }
+        });
+    }
+});
+</script>
 {% endblock %}
