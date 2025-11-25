@@ -1,18 +1,31 @@
+import random
+
 from locust import HttpUser, TaskSet, task
 
 from core.environment.host import get_host_for_locust_testing
 
+DATASET_ID = 1
+
 
 class CommentBehavior(TaskSet):
-    def on_start(self):
-        self.index()
 
-    @task
-    def index(self):
-        response = self.client.get("/comment")
-
+    # Get comments for a dataset
+    @task(1)
+    def get_comments_by_dataset(self):
+        url = f"/comment/dataset/{DATASET_ID}"
+        response = self.client.get(url)
         if response.status_code != 200:
-            print(f"Comment index failed: {response.status_code}")
+            print(f"GET {url} failed: {response.status_code}")
+
+    # Post a comment to a dataset
+    @task(2)
+    def post_comment_to_dataset(self):
+        url = f"/comment/dataset/{DATASET_ID}/create"
+        content = "".join(random.choices("abcdefghijklmnopqrstuvwxyz ", k=50))
+
+        response = self.client.post(url, json={"content": content})
+        if response.status_code != 201:
+            print(f"POST {url} failed: {response.status_code}, {response.text}")
 
 
 class CommentUser(HttpUser):
