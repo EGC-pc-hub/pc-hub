@@ -1,4 +1,3 @@
-import json
 import os
 import shutil
 from datetime import datetime, timezone
@@ -34,7 +33,6 @@ class DataSetSeeder(BaseSeeder):
 
         seeded_datasets = []
         for idx, dataset_file in enumerate(dataset_files):
-            file_path = os.path.join(datasets_dir, dataset_file)
             # Use minimal metrics since JSONs are component catalogs
             ds_metrics = DSMetrics(number_of_models="1", number_of_features="0")
             seeded_ds_metrics = self.seed([ds_metrics])[0]
