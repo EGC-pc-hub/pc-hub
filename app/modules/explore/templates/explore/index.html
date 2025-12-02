@@ -42,6 +42,12 @@
             <div class="row">
 
                 <div class="col-12">
+                    <!-- Advanced Search Toggle -->
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="toggleAdvancedSearch">
+                            <i data-feather="filter"></i> Advanced Filters
+                        </button>
+                    </div>
 
                     <div class="row">
 
@@ -86,6 +92,96 @@
 
                         </div>
 
+                        <!-- Advanced Filters Panel -->
+                        <div class="col-12" id="advancedFiltersPanel" style="display: none;">
+                            
+                            <!-- Authors Filter -->
+                            <div class="mb-3">
+                                <label class="form-label" for="authors_filter">Author(s)</label>
+                                <div class="position-relative">
+                                    <input class="form-control" id="authors_filter" name="authors_filter" type="text"
+                                           placeholder="Search by author name or ORCIDs">
+                                    <div id="authorSuggestions" class="dropdown-menu w-100" style="display: none; max-height: 200px; overflow-y: auto; z-index: 1000;"></div>
+                                </div>
+                                <small class="form-text text-muted">Separate multiple authors with commas</small>
+                                <button type="button" class="btn btn-outline-primary btn-sm mt-1" id="addAuthorBtn">
+                                    <i data-feather="plus"></i> Add Author
+                                </button>
+                            </div>
+
+                            <!-- Tags Filter -->
+                            <div class="mb-3">
+                                <label class="form-label" for="tags_filter">Tags</label>
+                                <div class="position-relative">
+                                    <input class="form-control" id="tags_filter" name="tags_filter" type="text"
+                                           placeholder="Enter tags separated by commas">
+                                    <div id="tagSuggestions" class="dropdown-menu w-100" style="display: none; max-height: 200px; overflow-y: auto; z-index: 1000;"></div>
+                                </div>
+                                <small class="form-text text-muted">Click to see available tags</small>
+                            </div>
+
+                            <!-- Publication Types (Multiple Selection) -->
+                            <div class="mb-3">
+                                <label class="form-label">Publication Types (Multiple Selection)</label>
+                                <div class="border rounded p-2" style="max-height: 180px; overflow-y: auto;">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="annotationcollection" id="pub_type_annotation">
+                                        <label class="form-check-label small" for="pub_type_annotation">Annotation Collection</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="book" id="pub_type_book">
+                                        <label class="form-check-label small" for="pub_type_book">Book</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="section" id="pub_type_section">
+                                        <label class="form-check-label small" for="pub_type_section">Book Section</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="conferencepaper" id="pub_type_conference">
+                                        <label class="form-check-label small" for="pub_type_conference">Conference Paper</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="article" id="pub_type_article">
+                                        <label class="form-check-label small" for="pub_type_article">Journal Article</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="preprint" id="pub_type_preprint">
+                                        <label class="form-check-label small" for="pub_type_preprint">Preprint</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="report" id="pub_type_report">
+                                        <label class="form-check-label small" for="pub_type_report">Report</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="thesis" id="pub_type_thesis">
+                                        <label class="form-check-label small" for="pub_type_thesis">Thesis</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="other" id="pub_type_other">
+                                        <label class="form-check-label small" for="pub_type_other">Other</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Date Range Filter -->
+                            <div class="mb-3">
+                                <label class="form-label">Publication Date Range</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input type="date" class="form-control form-control-sm" id="date_from" name="date_from" placeholder="From">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="date" class="form-control form-control-sm" id="date_to" name="date_to" placeholder="To">
+                                    </div>
+                                </div>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" id="anyDate">
+                                    <label class="form-check-label small" for="anyDate">Any date</label>
+                                </div>
+                            </div>
+
+                        </div>
+
                     </div>
 
                     <div class="row">
@@ -126,6 +222,11 @@
                                 <button id="clear-filters" class="btn btn-outline-primary">
                                     <i data-feather="x-circle" style="vertical-align: middle; margin-top: -2px"></i>
                                     Clear filters
+                                </button>
+
+                                <button id="apply-advanced-filters" class="btn btn-primary ms-2" style="display: none;" type="button">
+                                    <i data-feather="search" style="vertical-align: middle; margin-top: -2px"></i>
+                                    Apply Advanced Search
                                 </button>
 
 
