@@ -23,109 +23,94 @@ class DataSetSeeder(BaseSeeder):
         if not user1 or not user2:
             raise Exception("Users not found. Please seed users first.")
 
-        # Create DSMetrics instance
-        ds_metrics = DSMetrics(number_of_models="5", number_of_features="50")
-        seeded_ds_metrics = self.seed([ds_metrics])[0]
+        # Create exactly one dataset per JSON file in pc_examples
+        datasets_dir = os.path.join(os.path.dirname(__file__), "pc_examples")
+        dataset_files = [f for f in os.listdir(datasets_dir) if f.endswith(".json")]
 
-        # Create DSMetaData instances
-        ds_meta_data_list = [
-            DSMetaData(
-                deposition_id=1 + i,
-                title=f"Sample dataset {i + 1}",
-                description=f"Description for dataset {i + 1}",
-                publication_type=PublicationType.DATA_MANAGEMENT_PLAN,
-                publication_doi=f"10.1234/dataset{i + 1}",
-                dataset_doi=f"10.1234/dataset{i + 1}",
-                tags="tag1, tag2",
-                ds_metrics_id=seeded_ds_metrics.id,
-            )
-            for i in range(4)
-        ]
-        seeded_ds_meta_data = self.seed(ds_meta_data_list)
-
-        # Create Author instances and associate with DSMetaData
-        authors = [
-            Author(
-                name=f"Author {i + 1}",
-                affiliation=f"Affiliation {i + 1}",
-                orcid=f"0000-0000-0000-000{i}",
-                ds_meta_data_id=seeded_ds_meta_data[i % 4].id,
-            )
-            for i in range(4)
-        ]
-        self.seed(authors)
-
-        # Create DataSet instances
-        datasets = [
-            DataSet(
-                user_id=user1.id if i % 2 == 0 else user2.id,
-                ds_meta_data_id=seeded_ds_meta_data[i].id,
-                created_at=datetime.now(timezone.utc),
-            )
-            for i in range(4)
-        ]
-        seeded_datasets = self.seed(datasets)
-
-        # Assume there are 12 UVL files, create corresponding FMMetaData and
-        # FeatureModel
-        fm_meta_data_list = [
-            FMMetaData(
-                uvl_filename=f"file{i + 1}.uvl",
-                title=f"Feature Model {i + 1}",
-                description=f"Description for feature model {i + 1}",
-                publication_type=PublicationType.SOFTWARE_DOCUMENTATION,
-                publication_doi=f"10.1234/fm{i + 1}",
-                tags="tag1, tag2",
-                uvl_version="1.0",
-            )
-            for i in range(12)
-        ]
-        seeded_fm_meta_data = self.seed(fm_meta_data_list)
-
-        # Create Author instances and associate with FMMetaData
-        fm_authors = [
-            Author(
-                name=f"Author {i + 5}",
-                affiliation=f"Affiliation {i + 5}",
-                orcid=f"0000-0000-0000-000{i + 5}",
-                fm_meta_data_id=seeded_fm_meta_data[i].id,
-            )
-            for i in range(12)
-        ]
-        self.seed(fm_authors)
-
-        feature_models = [
-            FeatureModel(data_set_id=seeded_datasets[i // 3].id, fm_meta_data_id=seeded_fm_meta_data[i].id)
-            for i in range(12)
-        ]
-        seeded_feature_models = self.seed(feature_models)
-
-        # Create files, associate them with FeatureModels and copy files
         load_dotenv()
         working_dir = os.getenv("WORKING_DIR", "")
-        src_folder = os.path.join(working_dir, "app", "modules", "dataset", "uvl_examples")
-        for i in range(12):
-            file_name = f"file{i + 1}.uvl"
-            feature_model = seeded_feature_models[i]
-            dataset = next(ds for ds in seeded_datasets if ds.id == feature_model.data_set_id)
-            user_id = dataset.user_id
+        src_folder = os.path.join(working_dir, "app", "modules", "dataset", "pc_examples")
 
+        seeded_datasets = []
+        for idx, dataset_file in enumerate(dataset_files):
+            # Use minimal metrics since JSONs are component catalogs
+            ds_metrics = DSMetrics(number_of_models="1", number_of_features="0")
+            seeded_ds_metrics = self.seed([ds_metrics])[0]
+
+            ds_meta_data = DSMetaData(
+                deposition_id=idx + 1,
+                title=os.path.splitext(dataset_file)[0],
+                description=f"Dataset generated from {dataset_file}",
+                publication_type=PublicationType.SOFTWARE,
+                publication_doi=f"10.1234/dataset{idx + 1}",
+                dataset_doi=f"10.1234/dataset{idx + 1}",
+                tags="pc_examples",
+                ds_metrics_id=seeded_ds_metrics.id,
+            )
+            self.seed([ds_meta_data])
+
+            # Authors for dataset metadata
+            authors = [
+                Author(
+                    name=f"Author {i + 1}",
+                    affiliation=f"Affiliation {i + 1}",
+                    orcid=f"0000-0000-0000-000{i}",
+                    ds_meta_data_id=ds_meta_data.id,
+                )
+                for i in range(2)
+            ]
+            self.seed(authors)
+
+            # Create one DataSet for this file, alternate owners
+            dataset_model = DataSet(
+                user_id=user1.id if idx % 2 == 0 else user2.id,
+                ds_meta_data_id=ds_meta_data.id,
+                created_at=datetime.now(timezone.utc),
+            )
+            seeded_dataset = self.seed([dataset_model])[0]
+            seeded_datasets.append(seeded_dataset)
+
+            # Create FMMetaData and FeatureModel for this dataset file
+            fm_meta = FMMetaData(
+                uvl_filename=dataset_file,
+                title=f"Feature Model {idx + 1}",
+                description=f"Feature model from {dataset_file}",
+                publication_type=PublicationType.HARDWARE,
+                publication_doi=f"10.1234/fm{idx + 1}",
+                tags="pc_examples",
+                uvl_version="1.0",
+            )
+            fm_meta = self.seed([fm_meta])[0]
+
+            # Author for FMMetaData
+            fm_author = Author(
+                name=f"Author {idx + 5}",
+                affiliation=f"Affiliation {idx + 5}",
+                orcid=f"0000-0000-0000-00{idx + 5}",
+                fm_meta_data_id=fm_meta.id,
+            )
+            self.seed([fm_author])
+
+            feature_model = FeatureModel(data_set_id=seeded_dataset.id, fm_meta_data_id=fm_meta.id)
+            feature_model = self.seed([feature_model])[0]
+
+            # Copy file and create Hubfile entry
+            user_id = seeded_dataset.user_id
             dest_folder = os.path.join(
                 working_dir,
                 "uploads",
                 f"user_{user_id}",
-                f"dataset_{
-                    dataset.id}",
+                f"dataset_{seeded_dataset.id}",
             )
             os.makedirs(dest_folder, exist_ok=True)
-            shutil.copy(os.path.join(src_folder, file_name), dest_folder)
+            src_path = os.path.join(src_folder, dataset_file)
+            dest_path = os.path.join(dest_folder, dataset_file)
+            shutil.copy(src_path, dest_folder)
 
-            file_path = os.path.join(dest_folder, file_name)
-
-            uvl_file = Hubfile(
-                name=file_name,
-                checksum=f"checksum{i + 1}",
-                size=os.path.getsize(file_path),
+            hubfile = Hubfile(
+                name=dataset_file,
+                checksum=f"checksum{idx + 1}",
+                size=os.path.getsize(dest_path),
                 feature_model_id=feature_model.id,
             )
-            self.seed([uvl_file])
+            self.seed([hubfile])
