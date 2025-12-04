@@ -8,26 +8,10 @@ from app import db
 
 
 class PublicationType(Enum):
-    NONE = "none"
-    ANNOTATION_COLLECTION = "annotationcollection"
-    BOOK = "book"
-    BOOK_SECTION = "section"
-    CONFERENCE_PAPER = "conferencepaper"
-    DATA_MANAGEMENT_PLAN = "datamanagementplan"
-    JOURNAL_ARTICLE = "article"
-    PATENT = "patent"
-    PREPRINT = "preprint"
-    PROJECT_DELIVERABLE = "deliverable"
-    PROJECT_MILESTONE = "milestone"
-    PROPOSAL = "proposal"
-    REPORT = "report"
-    SOFTWARE_DOCUMENTATION = "softwaredocumentation"
-    TAXONOMIC_TREATMENT = "taxonomictreatment"
-    TECHNICAL_NOTE = "technicalnote"
-    THESIS = "thesis"
-    WORKING_PAPER = "workingpaper"
-    OTHER = "other"
-
+    NONE = "NONE"
+    SOFTWARE = "SOFTWARE"
+    HARDWARE = "HARDWARE"
+    OTHER = "OTHER"
 
 class Author(db.Model):
     id = db.Column(db.Integer, primary_key=True)
