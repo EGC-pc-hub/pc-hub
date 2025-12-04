@@ -359,3 +359,270 @@ def test_api_trending_returns_json(test_client, clean_database, test_app):
     assert len(data) >= 1
     assert data[0]["id"] == ds1.id
     assert data[0]["downloads"] == 1
+
+
+def test_trending_limit_parameter(clean_database, test_app):
+    """
+    WI101: Test del parámetro limit en trending_datasets_last_week.
+
+    OBJETIVO:
+    ---------
+    Verificar que el parámetro limit controla correctamente el número
+    de resultados retornados, evitando saturar interfaces cuando hay
+    muchos datasets populares.
+
+    ESCENARIO:
+    ----------
+    - 5 datasets creados, cada uno con descargas decrecientes
+    - DS1: 5 descargas (1º)
+    - DS2: 4 descargas (2º)
+    - DS3: 3 descargas (3º)
+    - DS4: 2 descargas (4º)
+    - DS5: 1 descarga (5º)
+
+    VALIDACIONES CON DIFERENTES LIMITS:
+    ------------------------------------
+    ✓ limit=2 → retorna 2 datasets (DS1, DS2)
+    ✓ limit=3 → retorna 3 datasets (DS1, DS2, DS3)
+    ✓ limit=10 → retorna 5 datasets (todos)
+    ✓ limit=0 → sin limitación (retorna todos)
+
+    IMPLICACIÓN EN WIDGETS:
+    ----------------------
+    Los widgets de trending en el dashboard pueden controlar cuántos
+    items mostrar sin preocuparse de rendimiento, independientemente
+    de cuántos datasets populares existan.
+    """
+    user = User(email="limit@example.com", password="pass")
+    db.session.add(user)
+    db.session.commit()
+
+    # Crear 5 datasets con descargas decrecientes
+    datasets = []
+    for i in range(1, 6):
+        ds = create_dataset_with_author(f"DS{i}", user.id, f"Author{i}")
+        datasets.append(ds)
+    db.session.commit()
+
+    # Calcular rango de la semana anterior
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    start_of_week = datetime(year=now.year, month=now.month, day=now.day, tzinfo=timezone.utc) - timedelta(
+        days=now.weekday()
+    )
+    last_week_start = start_of_week - timedelta(days=7)
+
+    # Crear descargas: DS1=5, DS2=4, DS3=3, DS4=2, DS5=1
+    for ds_idx, ds in enumerate(datasets):
+        num_downloads = 5 - ds_idx
+        for _ in range(num_downloads):
+            db.session.add(
+                DSDownloadRecord(
+                    dataset_id=ds.id,
+                    download_date=last_week_start + timedelta(days=1),
+                    download_cookie=str(uuid.uuid4()),
+                )
+            )
+    db.session.commit()
+
+    service = DataSetService()
+
+    # Validar limit=2
+    trending = service.trending_datasets_last_week(limit=2)
+    assert len(trending) == 2
+    assert trending[0]["id"] == datasets[0].id
+    assert trending[1]["id"] == datasets[1].id
+
+    # Validar limit=3
+    trending = service.trending_datasets_last_week(limit=3)
+    assert len(trending) == 3
+    assert trending[0]["downloads"] == 5
+    assert trending[1]["downloads"] == 4
+    assert trending[2]["downloads"] == 3
+
+    # Validar limit=10 (más que existentes)
+    trending = service.trending_datasets_last_week(limit=10)
+    assert len(trending) == 5
+
+    # Validar limit=None (sin límite)
+    trending = service.trending_datasets_last_week(limit=None)
+    assert len(trending) == 5
+
+
+def test_trending_dataset_author_info(clean_database, test_app):
+    """
+    WI101: Test de integridad de datos de autores en trending.
+
+    OBJETIVO:
+    ---------
+    Verificar que los datos del autor (nombre) se recuperan correctamente
+    en los datasets de trending, y que la estructura de datos es completa
+    para su visualización en el widget.
+
+    ESCENARIO:
+    ----------
+    - Dataset "My Dataset" con autor "John Smith"
+    - 2 descargas en la semana anterior
+
+    VALIDACIONES:
+    ---------
+    ✓ El dataset aparece en trending
+    ✓ El campo "title" es correcto
+    ✓ El campo "main_author" es correcto
+    ✓ El campo "downloads" es exacto
+    ✓ El campo "url" está presente y no está vacío
+
+    DATOS DEVUELTOS (estructura):
+    ----------------------------
+    {
+        "id": 1,
+        "title": "My Dataset",
+        "main_author": "John Smith",
+        "downloads": 2,
+        "url": "http://localhost/doi/..."
+    }
+
+    LÓGICA CRÍTICA:
+    ---------------
+    - Relación dataset → metadata → author funciona correctamente
+    - El método get_uvlhub_doi() genera URLs válidas
+    - Los datos no son nulos ni incompletos
+    """
+    user = User(email="author@example.com", password="pass")
+    db.session.add(user)
+    db.session.commit()
+
+    # Crear dataset con autor específico
+    ds = create_dataset_with_author("My Dataset", user.id, "John Smith")
+    db.session.commit()
+
+    # Crear 2 descargas en la semana anterior
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    start_of_week = datetime(year=now.year, month=now.month, day=now.day, tzinfo=timezone.utc) - timedelta(
+        days=now.weekday()
+    )
+    last_week_start = start_of_week - timedelta(days=7)
+
+    for _ in range(2):
+        db.session.add(
+            DSDownloadRecord(
+                dataset_id=ds.id,
+                download_date=last_week_start + timedelta(days=1),
+                download_cookie=str(uuid.uuid4()),
+            )
+        )
+    db.session.commit()
+
+    service = DataSetService()
+    trending = service.trending_datasets_last_week(limit=10)
+
+    # Validar que el dataset está en trending con datos correctos
+    assert len(trending) == 1
+    trending_item = trending[0]
+
+    assert trending_item["id"] == ds.id
+    assert trending_item["title"] == "My Dataset"
+    assert trending_item["main_author"] == "John Smith"
+    assert trending_item["downloads"] == 2
+    assert trending_item["url"] is not None
+    assert isinstance(trending_item["url"], str)
+    assert len(trending_item["url"]) > 0
+
+
+def test_trending_cross_user_datasets(clean_database, test_app):
+    """
+    WI101: Test de trending con múltiples usuarios.
+
+    OBJETIVO:
+    ---------
+    Verificar que el ranking de trending es global (agrupa datos de todos
+    los usuarios) y no está segmentado por usuario individual.
+
+    ESCENARIO:
+    ----------
+    - Usuario A crea Dataset A (3 descargas)
+    - Usuario B crea Dataset B (5 descargas)
+    - Usuario C crea Dataset C (4 descargas)
+
+    COMPORTAMIENTO ESPERADO:
+    ------------------------
+    El ranking global debe ser: B (5), C (4), A (3)
+    NO debe haber datasets filtrados por usuario.
+
+    IMPLICACIÓN EN EL WIDGET:
+    -------------------------
+    El widget de trending muestra los mejores datasets de toda la plataforma,
+    independientemente de quién sea el propietario, para maximizar discoverability.
+
+    VALIDACIONES:
+    ✓ Dataset B aparece primero (5 descargas)
+    ✓ Dataset C aparece segundo (4 descargas)
+    ✓ Dataset A aparece tercero (3 descargas)
+    ✓ Se respeta el orden global sin segmentación por usuario
+    """
+    # Crear 3 usuarios distintos
+    user_a = User(email="user_a@example.com", password="pass")
+    user_b = User(email="user_b@example.com", password="pass")
+    user_c = User(email="user_c@example.com", password="pass")
+    db.session.add_all([user_a, user_b, user_c])
+    db.session.commit()
+
+    # Crear datasets de cada usuario
+    ds_a = create_dataset_with_author("Dataset A", user_a.id, "Author A")
+    ds_b = create_dataset_with_author("Dataset B", user_b.id, "Author B")
+    ds_c = create_dataset_with_author("Dataset C", user_c.id, "Author C")
+    db.session.commit()
+
+    # Calcular rango de la semana anterior
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    start_of_week = datetime(year=now.year, month=now.month, day=now.day, tzinfo=timezone.utc) - timedelta(
+        days=now.weekday()
+    )
+    last_week_start = start_of_week - timedelta(days=7)
+
+    # Crear descargas: A=3, B=5 (ganador), C=4
+    for _ in range(3):
+        db.session.add(
+            DSDownloadRecord(
+                dataset_id=ds_a.id,
+                download_date=last_week_start + timedelta(days=1),
+                download_cookie=str(uuid.uuid4()),
+            )
+        )
+
+    for _ in range(5):
+        db.session.add(
+            DSDownloadRecord(
+                dataset_id=ds_b.id,
+                download_date=last_week_start + timedelta(days=2),
+                download_cookie=str(uuid.uuid4()),
+            )
+        )
+
+    for _ in range(4):
+        db.session.add(
+            DSDownloadRecord(
+                dataset_id=ds_c.id,
+                download_date=last_week_start + timedelta(days=3),
+                download_cookie=str(uuid.uuid4()),
+            )
+        )
+
+    db.session.commit()
+
+    service = DataSetService()
+    trending = service.trending_datasets_last_week(limit=10)
+
+    # Validar el orden global: B (5) > C (4) > A (3)
+    assert len(trending) == 3
+    assert trending[0]["id"] == ds_b.id
+    assert trending[0]["downloads"] == 5
+    assert trending[1]["id"] == ds_c.id
+    assert trending[1]["downloads"] == 4
+    assert trending[2]["id"] == ds_a.id
+    assert trending[2]["downloads"] == 3
