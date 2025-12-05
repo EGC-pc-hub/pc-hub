@@ -18,22 +18,21 @@ class Comment(db.Model):
     # many-to-one: dataset owns comments via backref on DataSet; avoid cascade here
     dataset = db.relationship("DataSet", backref="comments", lazy=True)
 
-    parent_id = db.Column(db.Integer, db.ForeignKey("comment.id"), nullable=True)
+    # self-referential many-to-one for replies
+    parent_id = db.Column(db.Integer, db.ForeignKey("comment.id", ondelete="CASCADE"), nullable=True)
     # parent/children relationship: avoid cascading destructive ops from child -> parent
     # parent/children relationship: replies are owned by the parent comment
     # deleting a parent should delete its replies as well (delete-orphan)
     parent = db.relationship(
         "Comment",
         remote_side=[id],
-        backref=db.backref("replies", cascade="all, delete-orphan"),
+        backref=db.backref("replies", cascade="all, delete"),
         lazy=True,
     )
     content = db.Column(db.String(256), nullable=False)
 
     # Visibility flag: dataset owners can hide/unhide comments
     visible = db.Column(db.Boolean, nullable=False, default=True)
-
-    content = db.Column(db.String(256), nullable=False)
 
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(pytz.timezone("Europe/Madrid")))
 
