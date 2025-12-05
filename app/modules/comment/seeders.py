@@ -3,20 +3,29 @@ from datetime import datetime
 import pytz
 
 from app import db
+from app.modules.auth.models import User
 from app.modules.comment.models import Comment
+from app.modules.dataset.models import DSMetaData
 from core.seeders.BaseSeeder import BaseSeeder
 
 
 class CommentSeeder(BaseSeeder):
 
     def run(self):
+        user1 = User.query.filter_by(email="user1@example.com").first()
+        user2 = User.query.filter_by(email="user2@example.com").first()
+
+        if not user1 or not user2:
+            raise Exception("Users not found. Please seed users first.")
+
+        dataset = DSMetaData.query.filter_by(title="monitor").first().data_set
 
         tz = pytz.timezone("Europe/Madrid")
 
         # Parent/top-level comment (as dict for comparison/creation)
         comment_a = {
-            "user_id": 1,
-            "dataset_id": 4,
+            "user_id": user1.id,
+            "dataset_id": dataset.id,
             "content": "prueba 1",
             "created_at": tz.localize(datetime(2025, 10, 12, 9, 0)),
             "visible": True,
@@ -24,8 +33,8 @@ class CommentSeeder(BaseSeeder):
 
         # Reply to the parent comment
         comment_b = {
-            "user_id": 2,
-            "dataset_id": 4,
+            "user_id": user2.id,
+            "dataset_id": dataset.id,
             "content": "prueba 2",
             "created_at": tz.localize(datetime(2025, 10, 12, 9, 30)),
             "visible": True,
@@ -34,8 +43,8 @@ class CommentSeeder(BaseSeeder):
 
         # Another top-level comment, hidden
         comment_c = {
-            "user_id": 1,
-            "dataset_id": 4,
+            "user_id": user1.id,
+            "dataset_id": dataset.id,
             "content": "prueba 3",
             "created_at": tz.localize(datetime(2025, 10, 12, 9, 45)),
             "visible": False,
