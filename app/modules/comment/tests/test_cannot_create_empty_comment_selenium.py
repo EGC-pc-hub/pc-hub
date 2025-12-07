@@ -16,7 +16,7 @@ class TestTestemptycomment:
     def test_testemptycomment(self):
         self.driver.get("http://127.0.0.1:5000/")
         self.driver.set_window_size(602, 743)
-        self.driver.find_element(By.LINK_TEXT, "Sample dataset 4").click()
+        self.driver.find_element(By.LINK_TEXT, "power-supply").click()
         element = self.driver.find_element(By.CSS_SELECTOR, "html")
         actions = ActionChains(self.driver)
         actions.move_to_element(element).click_and_hold().perform()
@@ -33,6 +33,6 @@ class TestTestemptycomment:
         self.driver.find_element(By.ID, "password").click()
         self.driver.find_element(By.ID, "password").send_keys("1234")
         self.driver.find_element(By.ID, "submit").click()
-        self.driver.find_element(By.LINK_TEXT, "Sample dataset 4").click()
+        self.driver.find_element(By.LINK_TEXT, "power-supply").click()
         self.driver.find_element(By.ID, "post-comment-btn").click()
         assert self.driver.switch_to.alert.text == "Empty comment"
