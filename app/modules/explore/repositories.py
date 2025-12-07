@@ -12,14 +12,33 @@ class ExploreRepository(BaseRepository):
     def __init__(self):
         super().__init__(DataSet)
 
-    def filter(self, query="", sorting="newest", publication_type="any", tags=[], 
-               filter_title="", filter_author="", filter_tags="", 
-               filter_publication_type="any", filter_date_from="", filter_date_to="", **kwargs):
-        
+    def filter(
+        self,
+        query="",
+        sorting="newest",
+        publication_type="any",
+        tags=[],
+        filter_title="",
+        filter_author="",
+        filter_tags="",
+        filter_publication_type="any",
+        filter_date_from="",
+        filter_date_to="",
+        **kwargs,
+    ):
+
         # Check if using advanced search
-        using_advanced_search = any([filter_title, filter_author, filter_tags, 
-                                     filter_publication_type != "any", filter_date_from, filter_date_to])
-        
+        using_advanced_search = any(
+            [
+                filter_title,
+                filter_author,
+                filter_tags,
+                filter_publication_type != "any",
+                filter_date_from,
+                filter_date_to,
+            ]
+        )
+
         # Start building the query
         datasets = (
             self.model.query.join(DataSet.ds_meta_data)
@@ -28,18 +47,18 @@ class ExploreRepository(BaseRepository):
             .join(FeatureModel.fm_meta_data)
             .filter(DSMetaData.dataset_doi.isnot(None))
         )
-        
+
         if using_advanced_search:
             # Advanced search: use individual field filters
             if filter_title:
                 datasets = datasets.filter(DSMetaData.title.ilike(f"%{filter_title}%"))
-            
+
             if filter_author:
                 datasets = datasets.filter(Author.name.ilike(f"%{filter_author}%"))
-            
+
             if filter_tags:
                 datasets = datasets.filter(DSMetaData.tags.ilike(f"%{filter_tags}%"))
-            
+
             if filter_publication_type != "any":
                 matching_type = None
                 for member in PublicationType:
@@ -48,14 +67,16 @@ class ExploreRepository(BaseRepository):
                         break
                 if matching_type is not None:
                     datasets = datasets.filter(DSMetaData.publication_type == matching_type.name)
-            
+
             if filter_date_from:
                 from datetime import datetime
+
                 date_from = datetime.strptime(filter_date_from, "%Y-%m-%d")
                 datasets = datasets.filter(self.model.created_at >= date_from)
-            
+
             if filter_date_to:
                 from datetime import datetime
+
                 date_to = datetime.strptime(filter_date_to, "%Y-%m-%d")
                 datasets = datasets.filter(self.model.created_at <= date_to)
         else:
@@ -79,7 +100,7 @@ class ExploreRepository(BaseRepository):
                     filters.append(DSMetaData.tags.ilike(f"%{word}%"))
 
                 datasets = datasets.filter(or_(*filters))
-            
+
             # Apply publication_type filter for regular search if not using advanced
             if publication_type != "any":
                 matching_type = None
