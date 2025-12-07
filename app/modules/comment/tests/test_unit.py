@@ -43,7 +43,7 @@ def test_dataset(module_client):
     user_id = getattr(module_client, "test_user2_id", None)
     assert user_id is not None, "Test user2 id not found; fixture did not create it."
     ds_meta = DSMetaData(
-        title="Test Dataset",
+        title="monitor",
         description="A dataset created for tests",
         publication_type=PublicationType.NONE,
         tags="test",
@@ -54,11 +54,6 @@ def test_dataset(module_client):
     db.session.add(dataset)
     db.session.commit()
     return dataset.id
-
-
-def test_sample_assertion(test_client):
-    greeting = "Hello, World!"
-    assert greeting == "Hello, World!", "The greeting does not coincide with 'Hello, World!'"
 
 
 def test_create_comment_dataset(module_client, test_dataset):
