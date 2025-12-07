@@ -63,8 +63,8 @@ class GithubBackupUser(HttpUser):
     max_wait = 9000
     host = get_host_for_locust_testing()
 
-class TrendingDatasetsBehavior(TaskSet):
 
+class TrendingDatasetsBehavior(TaskSet):
     """
     Pruebas de carga para el widget de Trending Datasets.
     Este TaskSet simula el comportamiento de usuarios accediendo a los endpoints de trending datasets (última semana).
@@ -116,7 +116,7 @@ class TrendingDatasetsBehavior(TaskSet):
 class TrendingDatasetsUser(HttpUser):
     """
     Usuario que simula el acceso a trending datasets.
-    
+
     CARACTERÍSTICAS:
     - Tiempo de espera entre tareas: 2-6 segundos
     - Pruebas más frecuentes: last-week (peso 3)
@@ -133,12 +133,12 @@ class TrendingDatasetsUser(HttpUser):
 class TrendingDatasetsStressUser(HttpUser):
     """
     Usuario de estrés que martillea los endpoints de trending.
-    
+
     CARACTERÍSTICAS:
     - Tiempo de espera muy corto: 200-500ms
     - Simula carga alta y picos de tráfico
     - Pruebas intensivas de endpoints
-    
+
     CASO DE USO:
     - Testing de capacidad y límites
     - Identificación de bottlenecks
