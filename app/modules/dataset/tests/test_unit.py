@@ -22,7 +22,7 @@ def sample_dataset(test_client):
     ds_meta_data = DSMetaData(
         title="Test Dataset for Counter",
         description="Test Description",
-        publication_type=PublicationType.JOURNAL_ARTICLE,
+        publication_type=PublicationType.HARDWARE,
         publication_doi="10.1234/test-counter",
         dataset_doi="10.1234/dataset-test-counter",
         tags="test,counter,dataset",
@@ -79,7 +79,7 @@ class TestDownloadCounter:
         ds_meta_data = DSMetaData(
             title="Test Dataset",
             description="Test Description",
-            publication_type=PublicationType.JOURNAL_ARTICLE,
+            publication_type=PublicationType.HARDWARE,
             publication_doi="10.1234/test",
             dataset_doi="10.1234/dataset-test",
         )
