@@ -1,6 +1,26 @@
 document.addEventListener('DOMContentLoaded', () => {
     send_query();
+    setupAdvancedSearch();
 });
+
+function setupAdvancedSearch() {
+    const toggleButton = document.getElementById('toggle-advanced-search');
+    const advancedPanel = document.getElementById('advanced-search-panel');
+    
+    if (toggleButton && advancedPanel) {
+        toggleButton.addEventListener('click', () => {
+            if (advancedPanel.style.display === 'none') {
+                advancedPanel.style.display = 'block';
+                toggleButton.innerHTML = '<i data-feather="filter" style="vertical-align: middle; margin-top: -2px"></i> Hide Advanced Search';
+                feather.replace();
+            } else {
+                advancedPanel.style.display = 'none';
+                toggleButton.innerHTML = '<i data-feather="filter" style="vertical-align: middle; margin-top: -2px"></i> Advanced Search';
+                feather.replace();
+            }
+        });
+    }
+}
 
 function send_query() {
 
@@ -21,6 +41,12 @@ function send_query() {
                 query: document.querySelector('#query').value,
                 publication_type: document.querySelector('#publication_type').value,
                 sorting: document.querySelector('[name="sorting"]:checked').value,
+                filter_title: document.querySelector('#filter_title')?.value || '',
+                filter_author: document.querySelector('#filter_author')?.value || '',
+                filter_tags: document.querySelector('#filter_tags')?.value || '',
+                filter_publication_type: document.querySelector('#filter_publication_type')?.value || 'any',
+                filter_date_from: document.querySelector('#filter_date_from')?.value || '',
+                filter_date_to: document.querySelector('#filter_date_to')?.value || '',
             };
 
             console.log(document.querySelector('#publication_type').value);
@@ -165,19 +191,31 @@ function clearFilters() {
     // Reset the search query
     let queryInput = document.querySelector('#query');
     queryInput.value = "";
-    // queryInput.dispatchEvent(new Event('input', {bubbles: true}));
 
     // Reset the publication type to its default value
     let publicationTypeSelect = document.querySelector('#publication_type');
-    publicationTypeSelect.value = "any"; // replace "any" with whatever your default value is
-    // publicationTypeSelect.dispatchEvent(new Event('input', {bubbles: true}));
+    publicationTypeSelect.value = "any";
 
     // Reset the sorting option
     let sortingOptions = document.querySelectorAll('[name="sorting"]');
     sortingOptions.forEach(option => {
-        option.checked = option.value == "newest"; // replace "default" with whatever your default value is
-        // option.dispatchEvent(new Event('input', {bubbles: true}));
+        option.checked = option.value == "newest";
     });
+
+    // Reset advanced search filters
+    const filterTitle = document.querySelector('#filter_title');
+    const filterAuthor = document.querySelector('#filter_author');
+    const filterTags = document.querySelector('#filter_tags');
+    const filterPublicationType = document.querySelector('#filter_publication_type');
+    const filterDateFrom = document.querySelector('#filter_date_from');
+    const filterDateTo = document.querySelector('#filter_date_to');
+
+    if (filterTitle) filterTitle.value = "";
+    if (filterAuthor) filterAuthor.value = "";
+    if (filterTags) filterTags.value = "";
+    if (filterPublicationType) filterPublicationType.value = "any";
+    if (filterDateFrom) filterDateFrom.value = "";
+    if (filterDateTo) filterDateTo.value = "";
 
     // Perform a new search with the reset filters
     queryInput.dispatchEvent(new Event('input', {bubbles: true}));

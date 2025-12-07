@@ -55,6 +55,75 @@
                             </div>
                         </div>
 
+                        <div class="col-12">
+                            <button class="btn btn-outline-secondary mb-3" type="button" id="toggle-advanced-search">
+                                <i data-feather="filter" style="vertical-align: middle; margin-top: -2px"></i>
+                                Advanced Search
+                            </button>
+                        </div>
+
+                        <div class="col-12" id="advanced-search-panel" style="display: none;">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">Advanced Search Filters</h5>
+                                    
+                                    <div class="row">
+                                        <div class="col-lg-6 col-12">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="filter_title">Title</label>
+                                                <input class="form-control" id="filter_title" name="filter_title" type="text" placeholder="Search by title">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-lg-6 col-12">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="filter_author">Author</label>
+                                                <input class="form-control" id="filter_author" name="filter_author" type="text" placeholder="Search by author name">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-lg-6 col-12">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="filter_tags">Tags</label>
+                                                <input class="form-control" id="filter_tags" name="filter_tags" type="text" placeholder="Search by tags">
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-6 col-12">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="filter_publication_type">Publication Type</label>
+                                                <select class="form-control" id="filter_publication_type" name="filter_publication_type">
+                                                    <option value="any">Any</option>
+                                                    <option value="none">None</option>
+                                                    <option value="software">Software</option>
+                                                    <option value="hardware">Hardware</option>
+                                                    <option value="other">Other</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-lg-6 col-12">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="filter_date_from">Date From</label>
+                                                <input class="form-control" id="filter_date_from" name="filter_date_from" type="date">
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-6 col-12">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="filter_date_to">Date To</label>
+                                                <input class="form-control" id="filter_date_to" name="filter_date_to" type="date">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="col-lg-6">
                             <div class="mb-3">
                                 <label class="form-label" for="publication_type">Filter by publication
