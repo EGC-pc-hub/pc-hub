@@ -87,10 +87,7 @@ class TrendingDatasetsBehavior(TaskSet):
         - Status 200 OK
         - Response es JSON válido (lista de datasets)
         """
-        response = self.client.get(
-            "/dataset/api/trending",
-            name="/dataset/api/trending"
-        )
+        response = self.client.get("/dataset/api/trending", name="/dataset/api/trending")
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
 
     @task(weight=2)
@@ -102,8 +99,7 @@ class TrendingDatasetsBehavior(TaskSet):
         limits = [5, 20, 100]
         for limit in limits:
             response = self.client.get(
-                f"/dataset/api/trending?limit={limit}",
-                name="/dataset/api/trending [with limit]"
+                f"/dataset/api/trending?limit={limit}", name="/dataset/api/trending [with limit]"
             )
             assert response.status_code == 200
             data = response.json()
@@ -146,6 +142,6 @@ class TrendingDatasetsStressUser(HttpUser):
     """
 
     tasks = [TrendingDatasetsBehavior]
-    min_wait = 200   # 200ms entre tareas
-    max_wait = 500   # 500ms entre tareas
+    min_wait = 200  # 200ms entre tareas
+    max_wait = 500  # 500ms entre tareas
     host = get_host_for_locust_testing()
