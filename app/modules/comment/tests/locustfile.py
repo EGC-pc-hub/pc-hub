@@ -9,7 +9,6 @@ DATASET_ID = 1
 
 
 class CommentBehavior(TaskSet):
-
     @task(1)
     def get_replies_by_dataset(self):
         # catch_response is used to make locust able to mark requests as success despite being 4xx
@@ -26,8 +25,8 @@ class CommentBehavior(TaskSet):
         content = "".join(random.choices("abcdefghijklmnopqrstuvwxyz ", k=50))
 
         response = self.client.post(url, json={"content": content})
-        # 302 expected due to not being logged in
-        assert response.status_code in (302)
+        # 200 given by login redirect , the post sends a 302 due to not being logged in
+        assert response.status_code == 200
 
 
 class CommentUser(HttpUser):
