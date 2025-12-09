@@ -70,10 +70,6 @@ a::after {
     transition: width 0.3s ease;
 }
 
-a:hover::after {
-    width: 100%;
-}
-
 .fixed-column {
     position: sticky;
     top: 0;

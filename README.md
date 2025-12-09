@@ -1,5 +1,5 @@
 <div style="text-align: center;">
-  <img src="https://www.uvlhub.io/static/img/logos/logo-light.svg" alt="Logo">
+  <img src="app/static/img/pc-hub-logo.jpeg" alt="Logo">
 </div>
 
 # uvlhub.io
