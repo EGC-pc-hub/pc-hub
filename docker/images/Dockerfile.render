@@ -8,7 +8,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && apt-get install -y --no-install-recommends bash \
     && apt-get install -y --no-install-recommends openrc \
-    && apt-get install -y --no-install-recommends build-essential 
+    && apt-get install -y --no-install-recommends build-essential
 
 # Clean up
 RUN apt-get clean \
@@ -21,6 +21,8 @@ WORKDIR /app
 COPY app/ ./app
 COPY core/ ./core
 COPY migrations/ ./migrations
+COPY rosemary/ ./rosemary
+COPY pyproject.toml .
 
 # Copy requirements.txt into the working directory /app
 COPY requirements.txt .
@@ -45,6 +47,9 @@ RUN pip install --no-cache-dir --upgrade pip
 
 # Install any needed packages specified in requirements.txt
 RUN pip install -r requirements.txt
+
+# Install rosemary CLI
+RUN pip install -e .
 
 # Expose port 80
 EXPOSE 80
