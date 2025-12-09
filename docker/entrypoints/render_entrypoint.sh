@@ -3,9 +3,9 @@
 # ---------------------------------------------------------------------------
 # Creative Commons CC BY 4.0 - David Romero - Diverso Lab
 # ---------------------------------------------------------------------------
-# This script is licensed under the Creative Commons Attribution 4.0 
-# International License. You are free to share and adapt the material 
-# as long as appropriate credit is given, a link to the license is provided, 
+# This script is licensed under the Creative Commons Attribution 4.0
+# International License. You are free to share and adapt the material
+# as long as appropriate credit is given, a link to the license is provided,
 # and you indicate if changes were made.
 #
 # For more details, visit:
@@ -23,8 +23,8 @@ if [ ! -d "migrations/versions" ]; then
 fi
 
 # Check if the database is empty
-if [ $(mariadb -u $MARIADB_USER -p$MARIADB_PASSWORD -h $MARIADB_HOSTNAME -P $MARIADB_PORT -D $MARIADB_DATABASE -sse "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$MARIADB_DATABASE';") -eq 0 ]; then
- 
+if [ $(mariadb --skip-ssl -u $MARIADB_USER -p$MARIADB_PASSWORD -h $MARIADB_HOSTNAME -P $MARIADB_PORT -D $MARIADB_DATABASE -sse "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$MARIADB_DATABASE';") -eq 0 ]; then
+
     echo "Empty database, migrating..."
 
     # Get the latest migration revision
@@ -40,8 +40,8 @@ else
     echo "Database already initialized, updating migrations..."
 
     # Get the current revision to avoid duplicate stamp
-    CURRENT_REVISION=$(mariadb -u $MARIADB_USER -p$MARIADB_PASSWORD -h $MARIADB_HOSTNAME -P $MARIADB_PORT -D $MARIADB_DATABASE -sse "SELECT version_num FROM alembic_version LIMIT 1;")
-    
+    CURRENT_REVISION=$(mariadb --skip-ssl -u $MARIADB_USER -p$MARIADB_PASSWORD -h $MARIADB_HOSTNAME -P $MARIADB_PORT -D $MARIADB_DATABASE -sse "SELECT version_num FROM alembic_version LIMIT 1;")
+
     if [ -z "$CURRENT_REVISION" ]; then
         # If no current revision, stamp with the latest revision
         flask db stamp head
@@ -49,6 +49,22 @@ else
 
     # Run the migration process to apply all database schema changes
     flask db upgrade
+fi
+
+# Seed the database if it's empty (no users exist) and seeding is enabled (variable only for staging, not production)
+# Seed script from https://github.com/track-hub-team/track-hub-1/blob/main/docker/entrypoints/render_entrypoint.sh
+USER_COUNT=$(mariadb --skip-ssl -u $MARIADB_USER -p$MARIADB_PASSWORD -h $MARIADB_HOSTNAME -P $MARIADB_PORT -D $MARIADB_DATABASE -sse "SELECT COUNT(*) FROM user;" 2>/dev/null || echo "0")
+
+if [ "$USER_COUNT" -eq 0 ] && [ "$ENABLE_SEEDER" = "true" ]; then
+    echo "No users found and ENABLE_SEEDER=true, seeding database..."
+    rosemary db:seed
+    echo "Database seeded successfully!"
+elif [ "$USER_COUNT" -eq 0 ]; then
+    echo "No users found, but ENABLE_SEEDER is not enabled. Skipping seed."
+else
+    echo "Database already has data. Resetting and seeding..."
+    rosemary db:reset -y
+    rosemary db:seed
 fi
 
 # Start the application using Gunicorn, binding it to port 80
