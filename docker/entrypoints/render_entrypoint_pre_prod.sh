@@ -3,14 +3,17 @@
 # ---------------------------------------------------------------------------
 # Creative Commons CC BY 4.0 - David Romero - Diverso Lab
 # ---------------------------------------------------------------------------
-# This script is licensed under the Creative Commons Attribution 4.0 
-# International License. You are free to share and adapt the material 
-# as long as appropriate credit is given, a link to the license is provided, 
+# This script is licensed under the Creative Commons Attribution 4.0
+# International License. You are free to share and adapt the material
+# as long as appropriate credit is given, a link to the license is provided,
 # and you indicate if changes were made.
 #
 # For more details, visit:
 # https://creativecommons.org/licenses/by/4.0/
 # ---------------------------------------------------------------------------
+
+# Exit immediately if a command exits with a non-zero status
+set -e
 
 # Initialize migrations only if the migrations directory doesn't exist
 if [ ! -d "migrations/versions" ]; then
@@ -49,6 +52,7 @@ else
 fi
 
 # Seed the database if it's empty (no users exist) and seeding is enabled (variable only for staging, not production)
+# Seed script from https://github.com/track-hub-team/track-hub-1/blob/main/docker/entrypoints/render_entrypoint.sh
 USER_COUNT=$(mariadb --skip-ssl -u $MARIADB_USER -p$MARIADB_PASSWORD -h $MARIADB_HOSTNAME -P $MARIADB_PORT -D $MARIADB_DATABASE -sse "SELECT COUNT(*) FROM user;" 2>/dev/null || echo "0")
 
 if [ "$USER_COUNT" -eq 0 ] && [ "$ENABLE_SEEDER" = "true" ]; then
