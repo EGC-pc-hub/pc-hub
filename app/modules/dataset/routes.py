@@ -36,6 +36,7 @@ from app.modules.dataset.services import (
     GitHubRepoService,
 )
 from app.modules.zenodo.services import ZenodoService
+from app.modules.flamapy.routes import check_json
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +132,7 @@ def upload():
     file = request.files["file"]
     temp_folder = current_user.temp_folder()
 
-    if not file or not file.filename.endswith(".uvl"):
+    if not file or not file.filename.endswith(".json"):
         return jsonify({"message": "No valid file"}), 400
 
     # create temp folder
@@ -156,10 +157,22 @@ def upload():
     except Exception as e:
         return jsonify({"message": str(e)}), 500
 
+    # Validate JSON format after saving
+    try:
+        with open(file_path, 'r') as f:
+            json.load(f)
+    except json.JSONDecodeError as e:
+        os.remove(file_path)  # Remove invalid file
+        error_msg = f"Invalid JSON format at line {e.lineno}, column {e.colno}: {e.msg}"
+        return jsonify({"error": error_msg}), 400
+    except Exception as e:
+        os.remove(file_path)
+        return jsonify({"error": str(e)}), 500
+
     return (
         jsonify(
             {
-                "message": "UVL uploaded and validated successfully",
+                "message": "JSON uploaded and validated successfully",
                 "filename": new_filename,
             }
         ),
