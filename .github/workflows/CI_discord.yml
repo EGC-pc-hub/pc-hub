@@ -4,49 +4,84 @@ on:
   push:
     branches:
       - main
+      - trunk
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+
+    # Global environment variables shared across services and steps
+    env:
+      MARIADB_ROOT_PASSWORD: uvlhub_root_password
+      MARIADB_DATABASE: uvlhubdb_test
+      MARIADB_TEST_DATABASE: uvlhubdb_test
+      MARIADB_USER: uvlhub_user
+      MARIADB_PASSWORD: uvlhub_password
+      MARIADB_HOSTNAME: 127.0.0.1
+      MARIADB_PORT: 3306
+      FLASK_ENV: testing
+
     services:
-      mysql:
-        image: mysql:5.7
+      # MariaDB service container for integration tests
+      mariadb:
+        image: mariadb:12.0.2
         env:
-          MYSQL_ROOT_PASSWORD: pchub_root_password
-          MYSQL_DATABASE: pchubdb_test
-          MYSQL_USER: pchub_user
-          MYSQL_PASSWORD: pchub_password
+          MARIADB_ROOT_PASSWORD: ${{ env.MARIADB_ROOT_PASSWORD }}
+          MARIADB_DATABASE: ${{ env.MARIADB_DATABASE }}
+          MARIADB_USER: ${{ env.MARIADB_USER }}
+          MARIADB_PASSWORD: ${{ env.MARIADB_PASSWORD }}
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+        options: >
+          --health-cmd="mariadb-admin ping -u root -p$MARIADB_ROOT_PASSWORD"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v5
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.12'
-    
-    - name: Setup environment
+
+    - name: Delete rosemary editable mode
+      run: sed -i '/rosemary @ file:\/\/\/app/d' requirements.txt
+
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install -e ./
 
-    - name: Run Rosemary tests
+    - name: Run Tests
       id: rosemary_tests
       run: |
-        rosemary test
+        pytest app/modules/ --ignore-glob='*selenium*'
         
     - name: Determine test result
       id: result
       run: |
         if [ "${{ steps.rosemary_tests.outcome }}" = "success" ]; then
-          echo "result=Tests passed" >> $GITHUB_OUTPUT
+          echo "result=✅ Tests passed" >> $GITHUB_OUTPUT
         else
-          echo "result=Tests failed" >> $GITHUB_OUTPUT
+          echo "result=❌ Tests failed" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Determine branch info
+      id: branch_info
+      run: |
+        BRANCH_NAME="${{ github.ref_name }}"
+        if [ "$BRANCH_NAME" = "main" ]; then
+          echo "branch_emoji=🚀" >> $GITHUB_OUTPUT
+          echo "branch_desc=Production (main)" >> $GITHUB_OUTPUT
+        elif [ "$BRANCH_NAME" = "trunk" ]; then
+          echo "branch_emoji=🔄" >> $GITHUB_OUTPUT
+          echo "branch_desc=Development (trunk)" >> $GITHUB_OUTPUT
+        else
+          echo "branch_emoji=🌿" >> $GITHUB_OUTPUT
+          echo "branch_desc=$BRANCH_NAME" >> $GITHUB_OUTPUT
         fi
 
     - name: Send result to Discord
@@ -54,5 +89,6 @@ jobs:
       with:
         webhook_url: ${{ secrets.DISCORD_WEBHOOK }}
         message: |
-          Git push detected on main branch.
-          Resultado de tests con Rosemary: ${{ steps.result.outputs.result }}
+          ${{ steps.branch_info.outputs.branch_emoji }} Git push detected on ${{ steps.branch_info.outputs.branch_desc }}
+          ${{ steps.result.outputs.result }}
+          Commit: ${{ github.event.head_commit.message }}
