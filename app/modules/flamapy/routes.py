@@ -1,11 +1,7 @@
 import json
 import logging
-import os
-import tempfile
 
-from flamapy.metamodels.fm_metamodel.transformations import GlencoeWriter, SPLOTWriter
-from flamapy.metamodels.pysat_metamodel.transformations import DimacsWriter, FmToPysat
-from flask import jsonify, send_file
+from flask import jsonify
 
 from app.modules.flamapy import flamapy_bp
 from app.modules.hubfile.services import HubfileService
@@ -17,11 +13,11 @@ logger = logging.getLogger(__name__)
 def check_json(file_id):
     try:
         hubfile = HubfileService().get_by_id(file_id)
-        
+
         # Try to load and validate JSON format
-        with open(hubfile.get_path(), 'r') as f:
-            data = json.load(f)
-        
+        with open(hubfile.get_path(), "r") as f:
+            json.load(f)
+
         # If JSON is successfully parsed, it's valid
         return jsonify({"message": "Valid Model"}), 200
 

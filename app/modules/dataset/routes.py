@@ -36,7 +36,6 @@ from app.modules.dataset.services import (
     GitHubRepoService,
 )
 from app.modules.zenodo.services import ZenodoService
-from app.modules.flamapy.routes import check_json
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +158,7 @@ def upload():
 
     # Validate JSON format after saving
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             json.load(f)
     except json.JSONDecodeError as e:
         os.remove(file_path)  # Remove invalid file
