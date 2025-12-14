@@ -16,7 +16,7 @@
 - **Horas**: número de horas empleadas en el proyecto
 - **Commits**: solo los hechos por miembros del equipo
 - **LoC**: líneas producidas por el equipo (total: 12798)
-- **Test**: solo los nuevos realizados por el equipo (total: 689)
+- **Test**: solo los nuevos realizados por el equipo (total: 112)
 - **Issues**: solo las gestionadas por el equipo (estimado: 25)
 - **Work Item**: principal WI del miembro
 - **Dificultad**: 2 de tipo High, 2 de tipo Medium y 2 de tipo Low
