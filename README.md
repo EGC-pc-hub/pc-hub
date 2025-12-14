@@ -47,3 +47,24 @@ Once you have logged into GitHub, click on your profile picture and select ‘Se
   - `GITHUB_CLIENT_ID`
   - `GITHUB_CLIENT_SECRET`
 3. On a dataset you own, click “Backup to Github”. First time will open a popup to login/authorize; after accepting, the backup runs and you’ll see a success alert and a link to the repository.
+## Two-Factor Authentication (TwoAuth)
+
+The app implements a two-factor authentication (2FA) system using email. It adds an extra layer of security by requiring users to enter a verification code sent to their email address during login and signup. See detailed setup and usage in:
+
+- [docs/TwoAuth.md](docs/TwoAuth.md)
+
+Quick setup:
+
+The system is pre-configured to work with Gmail using App Passwords:
+
+1. Enable 2-Step Verification on your Google Account at [Google Account Security](https://myaccount.google.com/security).
+2. Generate an App Password in your Google Account settings (search for "App passwords") and create a new app password for PC-Hub.
+3. Set env vars:
+  - `MAIL_USERNAME` (your Gmail address)
+  - `MAIL_PASSWORD` (the 16-character App Password)
+  - `MAIL_DEFAULT_SENDER` (your Gmail address)
+  - `ENABLE_2FA=true`
+4. During login/signup, users will be prompted to enter the 6-digit code sent to their registered email.
+
+> [!NOTE]
+> **TwoAuth is not implemented on Render** because [Render does not allow mail servers to run on their platform](https://community.render.com/t/mail-server-on-render-com/10529). For deployments on Render, TwoAuth must be disabled by setting `ENABLE_2FA=false`.
