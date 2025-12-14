@@ -32,7 +32,7 @@ jobs:
           MARIADB_PASSWORD: ${{ env.MARIADB_PASSWORD }}
         ports:
           - 3306:3306
-        options: >
+        options: >-
           --health-cmd="mariadb-admin ping -u root -p$MARIADB_ROOT_PASSWORD"
           --health-interval=10s
           --health-timeout=5s
