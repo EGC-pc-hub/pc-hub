@@ -2,6 +2,9 @@
 
 This feature implements a two-factor authentication (2FA) system using email. It adds an extra layer of security by requiring users to enter a verification code sent to their email address during login and signup.
 
+> [!NOTE]
+> **TwoAuth is not implemented on Render** because [Render does not allow mail servers to run on their platform](https://community.render.com/t/mail-server-on-render-com/10529). For deployments on Render, TwoAuth must be disabled by setting `ENABLE_2FA=false`.
+
 ## User Experience Overview
 
 - **Login**:
