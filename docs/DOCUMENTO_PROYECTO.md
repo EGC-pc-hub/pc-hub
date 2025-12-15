@@ -30,15 +30,15 @@
 ---
 
 ## Resumen ejecutivo
-El proyecto PC-Hub representa una evolución significativa de la plataforma UVLHub, orientada a la gestión de modelos de características en formato UVL. Durante el período de desarrollo, el equipo de 6 miembros ha invertido un total de 175 horas y producido 12,798 líneas de código, generando 112 tests y gestionando 25 issues a través de un proceso de desarrollo ágil con integración continua.
+El proyecto PC-Hub representa una evolución significativa de la plataforma UVLHub, orientada a la gestión de modelos de características en formato UVL. Durante el período de desarrollo, el equipo de 6 miembros ha invertido un total de 252 horas y producido 12,798 líneas de código, generando 112 tests y gestionando 25 issues a través de un proceso de desarrollo ágil con integración continua.
 PC-Hub es un repositorio web para modelos de características que integra principios de Ciencia Abierta, permitiendo a investigadores y desarrolladores compartir, versionar y analizar modelos de características de manera colaborativa. La plataforma se construye sobre una arquitectura modular basada en Flask (Python), con integración de Zenodo para publicación académica y Fakenodo para entornos de testing.
 El equipo ha implementado seis funcionalidades principales de alta complejidad: autenticación de dos factores (WI-89), sistema de comentarios en datasets (WI-101), servicio Fakenodo para simulación de Zenodo (WI-103), selección de base de datos para backup (WI-75), datasets en tendencia (WI-100), búsqueda avanzada de datasets (WI-83) y contador de descargas (WI-105). Estas funcionalidades responden a necesidades reales de la comunidad científica en cuanto a seguridad, colaboración y análisis de datos.
-El proyecto se ha desarrollado siguiendo metodologías DevOps, con un pipeline de CI/CD completamente automatizado que incluye 9 workflows diferentes: Pytest para pruebas unitarias, Python Lint para calidad de código, Codacy CI para análisis estático, Commits Syntax Checker para convenciones de commits, y múltiples workflows de despliegue a Render, Docker Hub y webhooks personalizados. Esta infraestructura garantiza la calidad del código y facilita el despliegue continuo.
+El proyecto se ha desarrollado siguiendo un pipeline de CI/CD completamente automatizado que incluye 9 workflows diferentes: Pytest para pruebas unitarias, Python Lint para calidad de código, Codacy CI para análisis estático, Commits Syntax Checker para convenciones de commits, y múltiples workflows de despliegue a Render en preproducción y producción y webhooks personalizados. Esta infraestructura garantiza la calidad del código y facilita el despliegue continuo.
 La arquitectura modular del sistema permite escalabilidad y mantenibilidad. El directorio app/modules contiene 13 módulos independientes (auth, comment, dataset, explore, featuremodel, flamapy, hubfile, profile, public, team, twoauth, webhook, zenodo), cada uno con su propia lógica de negocio, servicios, repositorios y tests. Esta separación de responsabilidades facilita el trabajo en paralelo del equipo y reduce el acoplamiento entre componentes.
-El equipo ha demostrado un fuerte compromiso con la calidad del software, alcanzando una cobertura de tests del 100% en la mayoría de los módulos críticos. Se han implementado 689 tests en total, incluyendo pruebas unitarias, de integración y de carga (load testing) para el módulo de trending datasets. El proyecto también incorpora pruebas de rendimiento utilizando Locust para simular múltiples usuarios concurrentes.
+El equipo ha demostrado un fuerte compromiso con la calidad del software, alcanzando una cobertura de tests del 100% en la mayoría de los módulos críticos. Se han implementado 112 tests en total, incluyendo pruebas unitarias, de integración y de carga (load testing) para el módulo de trending datasets. El proyecto también incorpora pruebas de rendimiento utilizando Locust para simular múltiples usuarios concurrentes.
 En términos de tecnologías, el stack incluye Python 3.11+, Flask 3.0, SQLAlchemy para ORM, MariaDB/MySQL para base de datos, Docker para containerización, GitHub Actions para CI/CD, y Render para hosting en producción. La aplicación soporta múltiples entornos de ejecución: local, Docker, Vagrant y pre-producción/producción en Render.
 El proyecto ha logrado importantes hitos técnicos: integración OAuth con GitHub para backup automático de datasets, implementación de Fakenodo que simula la API de Zenodo reduciendo dependencias externas en testing, sistema de autenticación de dos factores integrado con Flask-Mail, y un módulo de comentarios con respuestas anidadas que mejora la colaboración entre usuarios.
-La gestión del proyecto se ha realizado a través de ZenHub, con 20 issues cerrados exitosamente durante el ciclo de desarrollo. La distribución de trabajo ha sido equilibrada, con cada miembro contribuyendo entre 12-47 horas, demostrando un compromiso consistente del equipo. La documentación técnica está disponible en docs.uvlhub.io y cubre arquitectura, instalación, módulos, CLI Rosemary, CI/CD, deployment y troubleshooting.
+La gestión del proyecto se ha realizado a través de Github, con 20 issues cerrados exitosamente durante el ciclo de desarrollo. La distribución de trabajo ha sido equilibrada, demostrando un compromiso consistente del equipo. La documentación técnica está disponible en docs.uvlhub.io y cubre arquitectura, instalación, módulos, CLI Rosemary, CI/CD, deployment y troubleshooting.
 
 ---
 
@@ -56,7 +56,7 @@ PC-Hub es una plataforma web diseñada para la gestión colaborativa de modelos 
 5. **Búsqueda y Exploración**: Sistema de búsqueda avanzada que permite filtrar datasets por múltiples criterios (autor, fecha, tipo de publicación, tags). La página principal muestra datasets en tendencia basados en descargas recientes.
 6. **Sistema de Comentarios**: Los usuarios pueden comentar en cualquier dataset público, facilitando la discusión académica y el feedback. Los comentarios pueden ser respondidos, creando hilos de conversación.
 7. **Contador de Descargas**: Cada descarga de dataset se registra automáticamente, permitiendo analíticas de uso y determinar datasets populares.
-8. **Análisis con Flamapy**: Integración con la librería Flamapy para análisis automático de modelos de características (validación, operaciones de configuración, etc.).
+8. **Visualización de datasets populares**: Los usuarios pueden ver los datasets más populares de la semana pasada en el homepage, ordenados por número de descargas.
 ### Descripción Técnica y Arquitectura
 
 #### Arquitectura en Capas
@@ -137,7 +137,7 @@ Principales evoluciones respecto a UVLHub base:
 ## Visión global del proceso de desarrollo
 
 ### Metodología y Proceso
-El proyecto PC-Hub ha seguido una metodología ágil adaptada a las necesidades de un equipo académico de 6 personas, con sprints de desarrollo iterativos y revisiones continuas. El proceso se ha gestionado mediante ZenHub integrado con GitHub, permitiendo tracking de Work Items, gestión de sprints y visualización del progreso mediante boards Kanban.
+El proyecto PC-Hub ha seguido una metodología ágil adaptada a las necesidades de un equipo académico de 6 personas, con sprints de desarrollo iterativos y revisiones continuas. El proceso se ha gestionado mediante un proyecto de GitHub, permitiendo tracking de Work Items y visualización del progreso mediante boards Kanban.
 ### Flujo de Trabajo Git
 
 El equipo ha adoptado un flujo de trabajo basado en Git Flow modificado:
@@ -154,8 +154,8 @@ Vamos a detallar el ciclo completo de desarrollo del WI-89 como ejemplo represen
 
 - En reunión de sprint planning, se identifica la necesidad de 2FA para mejorar seguridad
 - Se crea issue #5 en GitHub: "Two-factor authentication (2FA)"
-- Se asigna a josemgarciar con prioridad High y estimación de 44 horas
-- Se crea Work Item WI-89 en ZenHub con descripción detallada de requisitos
+- Se asigna a josemgarciar con prioridad High y estimación de X horas
+- Se crea Work Item WI-89 en el proyecto de Github  con descripción detallada de requisitos, utilizando las plantillas para issues facilitadas por el equipo.
 
 #### 2. Creación de Rama y Desarrollo Inicial
 
@@ -194,7 +194,7 @@ git commit -m "feat(auth): integrate 2FA verification in login flow"
 El desarrollador ejecuta tests localmente antes de push:
 
 ```bash
-# Ejecutar tests del módulo twoauth
+# Ejecutar tests del módulo twoauth (también se pueden ejecutar con Rosemary)
 pytest app/modules/twoauth/tests/ -v
 
 # Verificar cobertura
@@ -217,25 +217,19 @@ Al hacer push, se activan automáticamente los workflows de CI:
 
 Si algún workflow falla, el desarrollador recibe notificación y debe corregir antes de continuar.
 
-#### 7. Creación de Pull Request
 
-Una vez completada la feature y pasando todos los checks:
-- Se crea Pull Request desde la rama feature hacia trunk
-- Se asignan revisores del equipo (mínimo 1 aprobación requerida)
-- Se vincula el PR con el issue #5 mediante palabras clave: `Closes #5`
-- Se añade descripción detallada de cambios y screenshots si aplica
-
-#### 8. Code Review
+#### 7. Code Review
 
 Los revisores examinan:
 - Calidad del código y adherencia a patrones del proyecto
-- Cobertura de tests (mínimo 80% requerido)
+- Cobertura de tests
 - Documentación en docstrings
 - Posibles vulnerabilidades de seguridad
 - Performance y optimización
 
 Comentarios y sugerencias se discuten directamente en el PR. El desarrollador realiza los cambios solicitados en nuevos commits.
-#### 9. Merge a Trunk
+
+#### 8. Merge a Trunk
 
 Tras aprobación:
 
@@ -252,15 +246,7 @@ El merge a trunk dispara automáticamente:
 - **Tests de regresión completos**
 - **Notificación en Discord del deployment**
 
-#### 10. Testing en Pre-producción
-
-El equipo realiza pruebas manuales en el entorno de pre-producción:
-- Verificación de flujo completo de 2FA
-- Testing cross-browser
-- Validación de emails recibidos
-- Testing de casos edge (códigos expirados, intentos múltiples)
-
-#### 11. Merge a Main y Producción
+#### 9. Merge a Producción (main)
 
 Si pre-producción es exitosa:
 
@@ -273,7 +259,7 @@ git push origin main
 Esto activa:
 - **Deploy to Render**: Despliegue automático a producción
 - **Publish image in Docker Hub**: Build y publicación de imagen Docker tagged con versión
-- **Creación automática de release notes**
+
 
 #### 12. Cierre de Issue y Documentación
 
@@ -290,7 +276,6 @@ Esto activa:
 - Git hooks pre-commit para validación automática
 
 #### Gestión de Proyecto
-- ZenHub para Agile boards y sprint planning
 - GitHub Issues para tracking de bugs y features
 - GitHub Projects para roadmap a largo plazo
 - Discord para comunicación del equipo y notificaciones automatizadas
@@ -300,7 +285,7 @@ Esto activa:
 - Pytest para testing unitario e integración (689 tests totales)
 - Flake8 y autopep8 para linting y formateo
 - Codacy para análisis estático de código
-- Coverage.py para métricas de cobertura
+- Rosemary para métricas de cobertura
 - Locust para load testing
 
 #### Desarrollo y Deployment
@@ -314,8 +299,8 @@ Esto activa:
 #### Comunicación y Documentación
 - Discord para comunicación sincrónica
 - GitHub Wiki para documentación de diseño
-- Sphinx para generación de documentación técnica
-- Postman para documentación de APIs (colección Fakenodo)
+- Postman para pruebas de APIs (colección Fakenodo)
+
 ### Gestión de Configuración
 
 El proyecto utiliza múltiples archivos de configuración según el entorno:
@@ -713,7 +698,7 @@ def test_increment_view_count_nonexistent_dataset(client):
     assert result == 0
 ```
 
-**Ejecutar tests localmente:**
+**Ejecutar tests localmente (también con Rosemary):**
 
 ```bash
 pytest app/modules/dataset/tests/test_services.py::test_increment_view_count -v
@@ -776,36 +761,8 @@ Al hacer push, GitHub Actions ejecuta automáticamente:
    - Detecta code smells, vulnerabilidades y complejidad
 
 Si todos los workflows pasan ✅, se puede proceder al siguiente paso.
-### Paso 10: Crear Pull Request
 
-```bash
-# Desde GitHub UI o usando GitHub CLI
-gh pr create --title "feat(dataset): add view counter to datasets" \
-  --body "## Descripción
-Implementa un contador de vistas para datasets que se incrementa cada vez que un usuario accede a la página de detalle.
-
-## Cambios realizados
-- ✅ Añadido campo views_count al modelo DataSet
-- ✅ Creada migración de base de datos
-- ✅ Implementado método increment_view_count en DataSetService
-- ✅ Modificado controlador para incrementar en cada vista
-- ✅ Actualizado template para mostrar contador
-- ✅ Añadidos tests unitarios con 100% cobertura
-- ✅ Documentación actualizada
-
-## Tests
-\`\`\`
-pytest app/modules/dataset/tests/ -v
-===================== 15 passed in 2.34s ======================
-\`\`\`
-
-## Screenshots
-[Incluir captura de la nueva métrica en la UI]
-
-Closes #21" \
-  --base trunk
-```
-### Paso 11: Code Review y Aprobación
+### Paso 10: Code Review y Aprobación
 
 El PR es revisado por al menos un miembro del equipo que verifica:
 
@@ -818,8 +775,8 @@ El PR es revisado por al menos un miembro del equipo que verifica:
 **Comentarios típicos en revisión:**
 
 - "¿Deberíamos considerar añadir índice a views_count para sorting futuro?"
-- "LGTM! Buen trabajo con la cobertura de tests"
-### Paso 12: Merge a Trunk
+- "Buen trabajo con la cobertura de tests!"
+### Paso 11: Merge a Trunk
 
 Una vez aprobado:
 
@@ -847,13 +804,7 @@ El equipo realiza smoke testing en pre-producción:
 
 Si pre-producción es exitosa:
 
-```bash
-git checkout main
-git pull origin main
-git merge trunk
-git tag -a v3.1.0 -m "feat: add dataset view counter"
-git push origin main --tags
-```
+- **Llegó la hora del lanzamiento de la versión a producción**.
 
 Esto activa:
 
@@ -861,18 +812,6 @@ Esto activa:
 - **Publish image in Docker Hub**: Publica imagen Docker con tag v3.1.0
 ### Paso 15: Monitorización Post-Deployment
 
-Después del despliegue, monitorizar:
-
-```bash
-# Ver logs en producción
-heroku logs --tail -a pc-hub-production  # o equivalente en Render
-
-# Verificar métricas en Render dashboard
-# - CPU usage
-# - Memory usage
-# - Response times
-# - Error rates
-```
 ---
 
 ## Resumen de Comandos y Herramientas

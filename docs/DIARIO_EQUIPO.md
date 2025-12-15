@@ -41,7 +41,7 @@
 - **Acuerdo 2025-02-01:** Se aprueba la adopción de las pautas M1 EGC como base de referencia del proyecto.
 - **Acuerdo 2025-02-02**: enfatizar en el caso del mockup 75 la necesidad de incluir en la documentación la extracción del token para el funcionamiento del WIS, destacándolo como punto crítico para el correcto despliegue.
 - **Acuerdo 2025-02-03:** Se define la política de ramas y flujo de trabajo bajo el modelo EGC Flow, con ramas main, trunk  y ramas individuales para cada feature.
-- **Acuerdo 2025-02-04:** Se acuerda implementar un pipeline de CI/CD con un workflow adicional distinto al utilizado en las prácticas previas, garantizando la correcta integración de los módulos y evitando errores de organización.
+- **Acuerdo 2025-02-04:** Se acuerda implementar un pipeline de CI/CD con un workflow adicional distinto al utilizado en las prácticas previas (discord), garantizando la correcta realización de pruebas por medio de avisos a un canal específico en la plataforma.
 - **Acuerdo 2025-02-05:** Cada miembro deberá desarrollar como mínimo dos pruebas por tipo (unitarias, integración, etc.), previéndose un total mayor según las funcionalidades implementadas (5-7 pruebas unitarias por funcionalidad).
 - **Acuerdo 2025-02-06:** Se valorará la creación de una estructura de organización común para almacenar y gestionar el repositorio del proyecto de forma homogénea.
 
@@ -60,7 +60,7 @@
 **Acuerdos tomados:**
 
 - **Acuerdo 2025-04-01:** Se decide reducir los niveles de sobreingeniería, implementando un módulo fakenodo con un archivo service.py destinado a simular entradas y salidas en formato JSON. Este módulo se desplegará de forma independiente en Render, al tratarse de una aplicación externa al proyecto principal (_pchub_).
-- **Acuerdo 2025-04-02:** Se establece el uso obligatorio de plantillas .md prerrellenadas para la creación, seguimiento y cierre de issues y errores, fomentando la trazabilidad mediante un sistema automatizado de gestión de incidencias.
+- **Acuerdo 2025-04-02:** Se establece el uso obligatorio de plantillas prerrellenadas para la creación de issues, fomentando la trazabilidad mediante un sistema más automatizado de gestión de incidencias.
 - **Acuerdo 2025-04-03:** Se recomienda complementar el uso de Codacy con otros workflows de análisis de código y documentación adicionales.
 - **Acuerdo 2025-04-04:** En cuanto a los entornos de desarrollo, se acuerda saber manejar el salto progresivo de local a Docker y a Vagrant.
 - **Acuerdo 2025-04-05:** Cada miembro desarrollará entre 2 y 3 pruebas por módulo, incluyendo casos límite y combinatorios, con el objetivo de fortalecer la cobertura y fiabilidad del sistema.
