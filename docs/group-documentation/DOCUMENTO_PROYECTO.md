@@ -139,9 +139,9 @@ Principales evoluciones respecto a UVLHub base:
 El proyecto PC-Hub ha seguido una metodología ágil adaptada a las necesidades de un equipo académico de 6 personas, con sprints de desarrollo iterativos y revisiones continuas. El proceso se ha gestionado mediante un proyecto de GitHub, permitiendo tracking de Work Items y visualización del progreso mediante boards Kanban.
 ### Flujo de Trabajo Git
 
-El equipo ha adoptado un flujo de trabajo basado en Git Flow modificado:
+El equipo ha adoptado un flujo de trabajo basado en Git Flow modificado (EGC Flow):
 
-1. **Rama principal (main)**: Contiene el código de producción estable. Solo se actualizan mediante pull requests aprobados.
+1. **Rama principal (main)**: Contiene el código de producción estable. Solo se actualizan mediante merges aprobados.
 2. **Rama trunk**: Rama de pre-producción donde se integran features completas antes de pasar a main. Permite testing en entorno similar a producción.
 3. **Ramas de feature**: Cada Work Item se desarrolla en una rama dedicada con nomenclatura `feature-wi{número}-{descripción-corta}`. Por ejemplo: `feature-wi89-two-factor-authentication`.
 4. **Ramas de bugfix**: Para correcciones urgentes se crean ramas `fix-{descripción}` o `bugfix-{issue-número}`.
@@ -270,7 +270,7 @@ Esto activa:
 
 #### Control de Versiones
 - Git 2.40+ con GitHub como repositorio remoto
-- Git Flow para gestión de branches
+- EGC Flow para gestión de branches
 - Conventional Commits para mensajes estandarizados
 - Git hooks pre-commit para validación automática
 
@@ -521,332 +521,95 @@ pc-hub/
 
 ## Ejercicio de propuesta de cambio
 
-### Propuesta: Añadir Contador de Vistas a Datasets
+### Propuesta: Mejora WI-101 - Agregar Contador de Comentarios en Datasets
 
-**Contexto**: Actualmente el sistema rastrea las descargas de datasets mediante el módulo DownloadCounter, pero no existe un mecanismo para contabilizar las visualizaciones de la página de detalle de cada dataset. Esta métrica sería útil para analíticas y para mostrar la popularidad relativa de los datasets independientemente de las descargas.
+**Contexto**: El sistema de comentarios (WI-101) ya está implementado y funcional. Los usuarios pueden comentar en datasets, pero no hay una forma visual de saber cuántos comentarios tiene un dataset sin abrir la página de detalle.
 
-**Objetivo**: Implementar un contador simple que incremente cada vez que un usuario visualiza la página de detalle de un dataset, almacenando el total en la base de datos.
+**Objetivo**: Mostrar un contador de comentarios totales en la tarjeta del dataset del homepage para dar visibilidad rápida de la actividad de comentarios.
+
+**Tiempo estimado**: 15 minutos (10 min código + 5 min CI/CD)
 
 ---
 
-### Paso 1: Crear Branch de Feature
+### Paso 1: Agregar Método en Service para Contar Comentarios
 
-```bash
-# Sincronizar con main
-git checkout main
-git pull origin main
-
-# Crear rama para la nueva feature
-git checkout -b feature-add-dataset-view-counter
-
-# Verificar que estamos en la rama correcta
-git branch
-* feature-add-dataset-view-counter
-  main
-  trunk
-```
-### Paso 2: Modificar Modelo de Dataset
-
-Editar el archivo `app/modules/dataset/models.py` para añadir el campo de contador de vistas:
-
-```python
-# Añadir nueva columna al modelo DataSet
-class DataSet(db.Model):
-    # ... campos existentes ...
-    views_count = db.Column(db.Integer, default=0, nullable=False)
-    # ... resto del modelo ...
-```
-
-**Commit atómico:**
-
-```bash
-git add app/modules/dataset/models.py
-git commit -m "feat(dataset): add views_count field to DataSet model"
-```
-### Paso 3: Crear Migración de Base de Datos
-
-```bash
-# Generar migración automática
-flask db migrate -m "Add views_count to dataset table"
-
-# Se genera archivo en migrations/versions/
-# Ejemplo: 20241214_add_views_count_to_dataset_table.py
-
-# Revisar migración generada
-cat migrations/versions/20241214_*.py
-```
-
-El contenido de la migración generada automáticamente será similar a:
-
-```python
-def upgrade():
-    op.add_column('data_set', 
-        sa.Column('views_count', sa.Integer(), nullable=False, server_default='0'))
-
-def downgrade():
-    op.drop_column('data_set', 'views_count')
-```
-
-**Aplicar migración en entorno local:**
-
-```bash
-flask db upgrade
-# Verificar en MySQL que la columna existe
-mysql -u root -p pchub
-DESCRIBE data_set;
-```
-
-**Commit de migración:**
-
-```bash
-git add migrations/versions/20241214_*.py
-git commit -m "feat(dataset): add database migration for views_count"
-```
-### Paso 4: Implementar Lógica de Incremento en Servicio
-
-Editar `app/modules/dataset/services.py` para añadir método de incremento:
+Editar [app/modules/dataset/services.py](app/modules/dataset/services.py):
 
 ```python
 class DataSetService:
-    # ... métodos existentes ...
-    
     @staticmethod
-    def increment_view_count(dataset_id: int):
-        """Incrementa el contador de vistas de un dataset"""
-        dataset = DataSetRepository.get_by_id(dataset_id)
-        if dataset:
-            dataset.views_count += 1
-            db.session.commit()
-            return dataset.views_count
-        return 0
+    def get_total_comments(dataset_id: int) -> int:
+        """Devuelve el total de comentarios de un dataset"""
+        from app.modules.comment.models import Comment
+        return Comment.query.filter_by(dataset_id=dataset_id).count()
 ```
 
-**Commit:**
+### Paso 2: Agregar Propiedad al Modelo
 
-```bash
-git add app/modules/dataset/services.py
-git commit -m "feat(dataset): add increment_view_count method to service"
-```
-### Paso 5: Modificar Controlador de Vista de Detalle
-
-Editar `app/modules/dataset/routes.py` para llamar al incremento en la vista de detalle:
+Editar [app/modules/dataset/models.py](app/modules/dataset/models.py):
 
 ```python
-@dataset_bp.route('/dataset/<int:dataset_id>', methods=['GET'])
-def view_dataset(dataset_id):
-    dataset = DataSetService.get_by_id(dataset_id)
-    if not dataset:
-        abort(404)
+class DataSet(db.Model):
+    # ... campos existentes ...
     
-    # Incrementar contador de vistas
-    DataSetService.increment_view_count(dataset_id)
-    
-    return render_template('dataset/view.html', dataset=dataset)
+    @property
+    def total_comments(self) -> int:
+        """Total de comentarios del dataset"""
+        return DataSetService.get_total_comments(self.id)
 ```
 
-**Commit:**
+### Paso 3: Actualizar Template del Homepage
 
-```bash
-git add app/modules/dataset/routes.py
-git commit -m "feat(dataset): increment view count when displaying dataset details"
-```
-### Paso 6: Actualizar Template para Mostrar Vistas
+Editar [app/modules/public/templates/public/index.html](app/modules/public/templates/public/index.html):
 
-Editar template `app/templates/dataset/view.html` para mostrar el contador:
-
-```xml
-<div class="dataset-stats">
-    <span class="stat-item">
-        <i class="fas fa-eye"></i> {{ dataset.views_count }} vistas
-    </span>
-    <span class="stat-item">
-        <i class="fas fa-download"></i> {{ dataset.downloads_count }} descargas
-    </span>
+```html
+<div class="row mb-2">
+    <div class="col-12">
+        <p class="p-0 m-0 text-secondary">
+            <i data-feather="download" style="display: inline; margin-right: 5px;"></i>
+            <small><strong data-download-counter="{{ dataset.id }}">{{ dataset.download_count }}</strong> descargas</small>
+            
+            <i data-feather="message-circle" style="display: inline; margin-left: 15px; margin-right: 5px;"></i>
+            <small><strong>{{ dataset.total_comments }}</strong> comentarios</small>
+        </p>
+    </div>
 </div>
 ```
 
-**Commit:**
+### Paso 4: Crear Tests
 
-```bash
-git add app/templates/dataset/view.html
-git commit -m "feat(dataset): display view count in dataset detail page"
-```
-### Paso 7: Crear Tests Unitarios
-
-Editar `app/modules/dataset/tests/test_services.py`:
+Editar [app/modules/dataset/tests/test_unit.py](app/modules/dataset/tests/test_unit.py):
 
 ```python
-def test_increment_view_count(client):
-    """Test que verifica el incremento correcto del contador de vistas"""
-    # Crear dataset de prueba
-    dataset = create_test_dataset(views_count=0)
-    db.session.add(dataset)
+def test_total_comments_count(test_client, sample_dataset):
+    """Test que el contador de comentarios es correcto"""
+    from app.modules.comment.models import Comment
+    
+    # Crear 3 comentarios
+    for i in range(3):
+        comment = Comment(
+            dataset_id=sample_dataset.id,
+            user_id=1,
+            content=f"Comentario {i}"
+        )
+        db.session.add(comment)
     db.session.commit()
     
-    # Incrementar vistas 3 veces
-    for _ in range(3):
-        DataSetService.increment_view_count(dataset.id)
-    
-    # Verificar que el contador es 3
-    updated_dataset = DataSetRepository.get_by_id(dataset.id)
-    assert updated_dataset.views_count == 3
+    assert sample_dataset.total_comments == 3
 
-def test_increment_view_count_nonexistent_dataset(client):
-    """Test que verifica comportamiento con dataset inexistente"""
-    result = DataSetService.increment_view_count(99999)
-    assert result == 0
+def test_total_comments_empty(test_client, sample_dataset):
+    """Test que devuelve 0 si no hay comentarios"""
+    assert sample_dataset.total_comments == 0
 ```
 
-**Ejecutar tests localmente (también con Rosemary):**
+### Paso 5: CI/CD y Merge
 
 ```bash
-pytest app/modules/dataset/tests/test_services.py::test_increment_view_count -v
+git add . && git commit -m "feat(dataset): add download counter WI-105"
+git push origin feature-wi105-download-counter
+# Los 4 workflows (Lint, Pytest, Commits, Codacy) se ejecutan automáticamente
+# Una vez pasan: merge a trunk, test en pre-producción, merge a main
 ```
-
-**Commit:**
-
-```bash
-git add app/modules/dataset/tests/test_services.py
-git commit -m "test(dataset): add unit tests for view counter functionality"
-```
-### Paso 8: Actualizar Documentación
-
-Crear/actualizar `docs/dataset-analytics.md`:
-
-```
-# Dataset Analytics
-
-## View Counter
-
-Cada dataset mantiene un contador de visualizaciones que se incrementa 
-automáticamente cada vez que un usuario accede a la página de detalle.
-
-### Campos relacionados:
-- `views_count`: Número total de vistas del dataset
-
-### Consideraciones:
-- El contador no distingue entre usuarios únicos
-- Las vistas de bots/crawlers también se cuentan
-- No requiere autenticación del usuario
-```
-
-**Commit:**
-
-```bash
-git add docs/dataset-analytics.md
-git commit -m "docs(dataset): add documentation for view counter feature"
-```
-### Paso 9: Push y Activación de CI/CD
-
-```bash
-# Push de la rama al remoto
-git push origin feature-add-dataset-view-counter
-```
-
-Al hacer push, GitHub Actions ejecuta automáticamente:
-
-1. **Python Lint** (CI_lint.yml): Verifica estilo PEP8
-   - Duración típica: ~15-20 segundos
-
-2. **Pytest** (CI_pytest.yml): Ejecuta toda la suite de tests
-   - Duración típica: ~1m 23s
-   - Verifica cobertura mínima del 80%
-
-3. **Commits Syntax Checker** (CI_commits.yml): Valida formato Conventional Commits
-   - Duración típica: ~5-7 segundos
-
-4. **Codacy CI** (CI_codacy.yml): Análisis estático de código
-   - Duración típica: ~1m 31s
-   - Detecta code smells, vulnerabilidades y complejidad
-
-Si todos los workflows pasan ✅, se puede proceder al siguiente paso.
-
-### Paso 10: Code Review y Aprobación
-
-El PR es revisado por al menos un miembro del equipo que verifica:
-
-- ✅ Código sigue convenciones del proyecto
-- ✅ Tests tienen cobertura adecuada
-- ✅ No introduce vulnerabilidades
-- ✅ Documentación está actualizada
-- ✅ Performance es aceptable (operación simple de incremento)
-
-**Comentarios típicos en revisión:**
-
-- "¿Deberíamos considerar añadir índice a views_count para sorting futuro?"
-- "Buen trabajo con la cobertura de tests!"
-### Paso 11: Merge a Trunk
-
-Una vez aprobado:
-
-```bash
-git checkout trunk
-git pull origin trunk
-git merge --no-ff feature-add-dataset-view-counter
-git push origin trunk
-```
-
-Esto dispara automáticamente:
-
-- **Deploy to Render pre-production**: Despliega a entorno de pruebas
-- **Todos los workflows de CI se ejecutan nuevamente en trunk**
-### Paso 13: Testing en Pre-producción
-
-El equipo realiza smoke testing en pre-producción:
-
-1. Acceder a https://pc-hub-pre-production.onrender.com
-2. Visualizar un dataset y verificar que el contador aparece
-3. Recargar la página varias veces
-4. Verificar que el contador incrementa correctamente
-5. Comprobar en logs que no hay errores
-### Paso 14: Merge a Main y Deploy a Producción
-
-Si pre-producción es exitosa:
-
-- **Llegó la hora del lanzamiento de la versión a producción**.
-
-Esto activa:
-
-- **Deploy to Render**: Despliega automáticamente a producción
-
-### Paso 15: Monitorización Post-Deployment
-
----
-
-## Resumen de Comandos y Herramientas
-
-### Comandos Git utilizados
-
-```bash
-git checkout, git pull, git push
-git branch, git merge
-git add, git commit
-git tag
-```
-
-### Comandos Flask utilizados
-
-```bash
-flask db migrate    # Generar migración
-flask db upgrade    # Aplicar migración
-flask run          # Ejecutar servidor desarrollo
-```
-
-### Comandos de Testing
-
-```bash
-pytest app/modules/dataset/tests/ -v
-pytest --cov=app.modules.dataset
-flake8 app/modules/dataset/
-```
-
-### Herramientas de Gestión de Configuración
-
-- **GitHub** para control de versiones
-- **GitHub Actions** para CI/CD automático
-- **Flask-Migrate** para versionado de base de datos
-- **Docker** para reproducibilidad de entornos
-- **Render** para deployment automatizado
 
 ---
 
@@ -870,9 +633,9 @@ El proyecto PC-Hub ha demostrado ser un caso de estudio exitoso en la aplicació
 
 #### Logros de Proceso
 
-1. **Colaboración Efectiva**: A pesar de ser un equipo distribuido, la combinación de Git Flow, ZenHub y Discord ha facilitado una comunicación efectiva y coordinación de tareas. Los 183 commits realizados demuestran un ritmo de trabajo consistente.
+1. **Colaboración Efectiva**: A pesar de ser un equipo distribuido, la combinación de EGC Flow, Github Project y Discord ha facilitado una comunicación efectiva y coordinación de tareas. Los 183 commits realizados demuestran un ritmo de trabajo consistente.
 
-2. **Documentación Completa**: La documentación técnica disponible en docs.uvlhub.io y en el repositorio facilita onboarding de nuevos desarrolladores y mantenimiento futuro. Cada módulo incluye README con instrucciones de uso y arquitectura.
+2. **Documentación Completa**: La documentación técnica disponible en docs.uvlhub.io y en el repositorio facilita onboarding de nuevos desarrolladores y mantenimiento futuro. Los módulos de autenticación con doble factor y backup en GitHub incluyen README con instrucciones de uso.
 
 3. **Gestión de Configuración Profesional**: El uso de múltiples archivos de configuración por entorno (.env.local, .env.docker, .env.production) y la separación clara de responsabilidades demuestra madurez en prácticas de deployment.
 
