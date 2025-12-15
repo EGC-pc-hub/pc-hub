@@ -115,8 +115,7 @@ Pipeline completo con 9 workflows en GitHub Actions:
 - **CI_discord.yml**: Ejecuta tests Rosemary y notifica en Discord
 - **CD_render.yml**: Despliegue automático a producción en Render
 - **CD_render-pre-production.yml**: Despliegue a entorno de pre-producción
-- **CD_dockerhub.yml**: Build y push de imagen Docker
-- **CD_webhook.yml**: Trigger de webhooks post-deployment
+-
 #### Cambios Desarrollados para el Proyecto
 
 Principales evoluciones respecto a UVLHub base:
@@ -258,7 +257,7 @@ git push origin main
 
 Esto activa:
 - **Deploy to Render**: Despliegue automático a producción
-- **Publish image in Docker Hub**: Build y publicación de imagen Docker tagged con versión
+
 
 
 #### 12. Cierre de Issue y Documentación
@@ -809,7 +808,7 @@ Si pre-producción es exitosa:
 Esto activa:
 
 - **Deploy to Render**: Despliega automáticamente a producción
-- **Publish image in Docker Hub**: Publica imagen Docker con tag v3.1.0
+
 ### Paso 15: Monitorización Post-Deployment
 
 ---
