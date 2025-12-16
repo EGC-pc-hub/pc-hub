@@ -101,6 +101,11 @@ class DataSet(db.Model):
         from app.modules.dataset.services import DataSetService
 
         return DataSetService().get_uvlhub_doi(self)
+    
+    @property
+    def total_comments(self) -> int:
+        """Total de comentarios del dataset"""
+        return DataSetService.get_total_comments(self.id)
 
     def to_dict(self):
         return {

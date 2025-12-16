@@ -90,6 +90,8 @@
                                 <p class="p-0 m-0 text-secondary">
                                     <i data-feather="download" style="display: inline; margin-right: 5px; width: 18px;"></i>
                                     <small><strong data-download-counter="{{ dataset.id }}">{{ dataset.download_count }}</strong> <span data-download-label>download{{ 's' if dataset.download_count != 1 else '' }}</span></small>
+                                    <i data-feather="message-circle" style="display: inline; margin-left: 15px; margin-right: 5px;"></i>
+                                    <small><strong>{{ dataset.total_comments }}</strong> comentarios</small>
                                 </p>
                             </div>
 

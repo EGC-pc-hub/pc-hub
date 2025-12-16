@@ -100,7 +100,13 @@ class DataSetService(BaseService):
 
     def total_dataset_views(self) -> int:
         return self.dsviewrecord_repostory.total_dataset_views()
-
+    
+    @staticmethod
+    def get_total_comments(dataset_id: int) -> int:
+        """Devuelve el total de comentarios de un dataset"""
+        from app.modules.comment.models import Comment
+        return Comment.query.filter_by(dataset_id=dataset_id).count()
+    
     def trending_datasets_last_week(self, limit: int = 3):
         """
         WI101: Retorna los datasets más descargados en la semana anterior.
