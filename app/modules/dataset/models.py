@@ -105,6 +105,7 @@ class DataSet(db.Model):
     @property
     def total_comments(self) -> int:
         """Total de comentarios del dataset"""
+        from app.modules.dataset.services import DataSetService
         return DataSetService.get_total_comments(self.id)
 
     def to_dict(self):

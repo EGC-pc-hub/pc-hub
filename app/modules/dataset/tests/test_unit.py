@@ -285,3 +285,21 @@ class TestDownloadCounterIntegration:
         assert sample_dataset.download_count == initial_count + 1
 
         logout(test_client)
+
+def test_total_comments_count(test_client, sample_dataset):
+    """Test que el contador de comentarios es correcto"""
+    from app import db
+    from app.modules.comment.models import Comment
+    
+    # Crear 3 comentarios
+    for i in range(3):
+        comment = Comment(
+            dataset_id=sample_dataset.id,
+            user_id=1,
+            content=f"Comentario {i}"
+        )
+        db.session.add(comment)
+    db.session.commit()
+    
+    assert sample_dataset.total_comments == 3
+
