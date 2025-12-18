@@ -31,7 +31,7 @@ jobs:
     services:
       # MariaDB service container for integration tests
       mariadb:
-        image: mariadb:12.0.2
+        image: mariadb:11.4
         env:
           MARIADB_ROOT_PASSWORD: ${{ env.MARIADB_ROOT_PASSWORD }}
           MARIADB_DATABASE: ${{ env.MARIADB_DATABASE }}
@@ -51,11 +51,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      # Step 2: Set up Python environment (version 3.12)
+      # Step 2: Set up Python environment (version 3.11)
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       # Step 3: Remove local editable mode for rosemary dependency (not CI-friendly)
       - name: Delete rosemary editable mode
